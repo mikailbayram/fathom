@@ -17,10 +17,14 @@ class AI::ClientTest < ActiveSupport::TestCase
 
   # A chat double that rejects its first +failures+ calls the way a metered
   # provider does, then answers.
-  def chat_double(calls:, failures: 0, error: nil)
+  def chat_double(calls:, failures: 0, error: nil, thinking: nil)
     Object.new.tap do |chat|
       %i[with_provider_options with_instructions with_schema].each do |builder|
         chat.define_singleton_method(builder) { |*| self }
+      end
+      chat.define_singleton_method(:with_thinking) do |**options|
+        thinking&.push(options)
+        self
       end
       answer = reply
       chat.define_singleton_method(:ask) do |*|
@@ -82,5 +86,34 @@ class AI::ClientTest < ActiveSupport::TestCase
     end
 
     assert_equal 1, calls.size, "retrying a real failure would only delay it"
+  end
+
+  test "asks for the reasoning effort the role carries" do
+    calls = []
+    thinking = []
+    chat = AI::Models::Model.new(role: :chat, id: "gpt-5.6-terra", provider: :openrouter, effort: :medium)
+
+    with_env(LIVE) do
+      with_stub(RubyLLM, :chat, ->(**) { chat_double(calls: calls, thinking: thinking) }) do
+        AI::Client.new(model: chat, operation: "chat_answer", scan: @scan).text(instructions: "i", prompt: "p")
+      end
+    end
+
+    assert_equal [ { effort: :medium } ], thinking
+  end
+
+  test "says nothing about effort for a role that sets none" do
+    # A role with no effort must leave the provider its own default rather than
+    # quietly asking for one, which is what every non-chat role expects.
+    calls = []
+    thinking = []
+
+    with_env(LIVE) do
+      with_stub(RubyLLM, :chat, ->(**) { chat_double(calls: calls, thinking: thinking) }) do
+        client.text(instructions: "i", prompt: "p")
+      end
+    end
+
+    assert_empty thinking
   end
 end
