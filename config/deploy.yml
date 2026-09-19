@@ -24,6 +24,8 @@ proxy:
   host: fathom.solution404testdomain.com
   healthcheck:
     path: /up
+    # First boot runs db:prepare against four empty databases; 30s is not enough.
+    timeout: 90
 
 # Kamal runs a registry:3 container locally and SSH-forwards port 5555 to the
 # deploy hosts, so they pull through the tunnel. No external registry, no
