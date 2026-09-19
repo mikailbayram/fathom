@@ -26,16 +26,17 @@ ENV["AI_ANALYSIS_MODEL"] = "gpt-5.6-terra"
 ENV["AI_CHAT_MODEL"] = "gpt-5.6-terra"
 ENV.delete("AI_EMBEDDING_PROVIDER")
 
-# Same reason the model routing is pinned above: dotenv loads the developer's
-# .env here too, and a real password in it would 401 every integration request.
-# The suite runs with no credentials, and the tests that are about the wall set
-# them with with_env.
-ENV.delete("FATHOM_USERNAME")
-ENV.delete("FATHOM_PASSWORD")
-
 require_relative "../config/environment"
 require "rails/test_help"
 require "inertia_rails/minitest"
+
+# After the environment, not before it. dotenv only sets a variable that is not
+# already there, so pinning a value above works but deleting one does not --
+# booting Rails loads the developer's .env and puts the password straight back,
+# and every integration request then answers 401. The suite runs with no
+# credentials; the tests that are about the wall set them with with_env.
+ENV.delete("FATHOM_USERNAME")
+ENV.delete("FATHOM_PASSWORD")
 
 module ActiveSupport
   class TestCase
