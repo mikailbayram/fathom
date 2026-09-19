@@ -38,7 +38,6 @@ env:
     - RAILS_MASTER_KEY
     - DATABASE_URL
     - OPENAI_API_KEY
-    - OPENROUTER_API_KEY
     - FIRECRAWL_API_KEY
     # Unset, these refuse every request in production rather than opening the
     # app up. A deploy that forgets them fails closed and says 401.
@@ -47,11 +46,8 @@ env:
   clear:
     APP_MODE: live
     ENABLE_LIVE_AI: true
-    # Analysis and chat route through the aggregator; embeddings stay pinned to
-    # OpenAI because the stored vectors were produced by text-embedding-3-small
-    # and changing the embedding model invalidates them.
-    AI_PROVIDER: openrouter
-    AI_EMBEDDING_PROVIDER: openai
+    # AI_PROVIDER and AI_EMBEDDING_PROVIDER are deliberately absent: every role
+    # runs on OpenAI, which is what they already default to.
     RAILS_MAX_THREADS: 3
     WEB_CONCURRENCY: 1
     JOB_THREADS: 8

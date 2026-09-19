@@ -53,7 +53,7 @@ class SpendingLimitTest < ActiveSupport::TestCase
     WebsiteIntelligence.config.max_daily_ai_cost_usd = 100.0
     WebsiteIntelligence.stub_mode(:live) do
       (SpendingLimit::UNPRICED_TOLERANCE + 1).times do
-        AIUsage.record(operation: "claim_extraction", provider: "openrouter", model: "x", scan: @scan)
+        AIUsage.record(operation: "claim_extraction", provider: "openai", model: "x", scan: @scan)
       end
 
       error = assert_raises(SpendingLimit::Exceeded) { SpendingLimit.new(scan: @scan).enforce! }
@@ -65,7 +65,7 @@ class SpendingLimitTest < ActiveSupport::TestCase
     WebsiteIntelligence.config.max_scan_ai_cost_usd = 2.0
     WebsiteIntelligence.config.max_daily_ai_cost_usd = 100.0
     WebsiteIntelligence.stub_mode(:live) do
-      AIUsage.record(operation: "claim_extraction", provider: "openrouter", model: "x", scan: @scan)
+      AIUsage.record(operation: "claim_extraction", provider: "openai", model: "x", scan: @scan)
 
       assert SpendingLimit.new(scan: @scan).enforce!
     end
