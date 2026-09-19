@@ -32,6 +32,7 @@ module AI
         tool = CorpusSearchTool.new(chatbot.scan)
 
         chat = RubyLLM.chat(model: model.id, provider: model.provider, assume_model_exists: true)
+        chat.with_thinking(effort: model.effort) if model.effort
         chat.with_instructions(instructions)
         chat.with_tools(tool)
         chat.with_schema(REPLY_SCHEMA)

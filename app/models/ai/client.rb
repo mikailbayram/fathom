@@ -71,6 +71,7 @@ module AI
         # The configured model IDs are deliberately not looked up in RubyLLM's
         # registry: model routing is ours to decide, not the gem's to validate.
         chat = RubyLLM.chat(model: model.id, provider: model.provider, assume_model_exists: true)
+        chat.with_thinking(effort: model.effort) if model.effort
         chat.with_provider_options(usage_accounting) if usage_accounting
         chat.with_instructions(instructions)
         chat.with_schema(schema) if schema

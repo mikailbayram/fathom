@@ -24,7 +24,7 @@ module WebsiteIntelligence
   class ExternalRequestBlocked < StandardError; end
 
   class AiConfiguration
-    attr_accessor :provider, :embedding_model, :fast_model, :analysis_model, :chat_model
+    attr_accessor :provider, :embedding_model, :fast_model, :analysis_model, :chat_model, :chat_effort
     attr_writer :embedding_dimensions, :embedding_provider
 
     def initialize
@@ -33,6 +33,15 @@ module WebsiteIntelligence
       @fast_model = ENV.fetch("AI_FAST_MODEL", "gpt-5.6-luna")
       @analysis_model = ENV.fetch("AI_ANALYSIS_MODEL", "gpt-5.6-terra")
       @chat_model = ENV.fetch("AI_CHAT_MODEL", "gpt-5.6-terra")
+
+      # Reasoning effort, and only for chat. This is the one call a person is
+      # sitting and waiting on: every other role is batch work behind a scan,
+      # where accuracy is worth whatever the wait costs. The reply is capped at
+      # a few sentences either way, so the reasoning tokens are most of what
+      # the visitor is waiting for rather than the answer itself.
+      #
+      # Blank sends no effort at all and lets the provider pick its default.
+      @chat_effort = ENV.fetch("AI_CHAT_EFFORT", "medium").presence&.to_sym
       @embedding_provider = ENV["AI_EMBEDDING_PROVIDER"].presence&.to_sym
       @embedding_dimensions = ENV["AI_EMBEDDING_DIMENSIONS"]&.to_i
     end

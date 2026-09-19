@@ -86,6 +86,33 @@ class WebsiteIntelligenceTest < ActiveSupport::TestCase
     end
   end
 
+  test "carries reasoning effort on the chat role and nowhere else" do
+    # Chat is the only call someone sits and waits on. Analysis and extraction
+    # run behind a scan, where spending reasoning tokens is the right trade.
+    WebsiteIntelligence.reset_configuration!
+
+    assert_equal :medium, AI::Models.chat.effort
+    assert_nil AI::Models.analysis.effort
+    assert_nil AI::Models.fast.effort
+    assert_nil AI::Models.embedding.effort
+  end
+
+  test "an empty chat effort sends none, leaving the provider its own default" do
+    with_env("AI_CHAT_EFFORT" => "") do
+      WebsiteIntelligence.reset_configuration!
+
+      assert_nil AI::Models.chat.effort
+    end
+  end
+
+  test "chat effort is an environment change like every other routing decision" do
+    with_env("AI_CHAT_EFFORT" => "low") do
+      WebsiteIntelligence.reset_configuration!
+
+      assert_equal :low, AI::Models.chat.effort
+    end
+  end
+
   test "hands RubyLLM the key belonging to the provider in use" do
     with_env("AI_PROVIDER" => "openrouter", "OPENROUTER_API_KEY" => "sk-or-test") do
       WebsiteIntelligence.reset_configuration!
