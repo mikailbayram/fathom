@@ -1,0 +1,27 @@
+# Async adapter only works within the same process, so for manually triggering cable updates from a console,
+# and seeing results in the browser, you must do so from the web console (running inside the dev process),
+# not a terminal started via bin/rails console! Add "console" to any action or any ERB template view
+# to make the web console appear.
+# Solid Cable in development too, not async: the demo's answers are generated in
+# the Solid Queue worker, and an async broadcast never leaves the process that
+# made it.
+development:
+  adapter: solid_cable
+  connects_to:
+    database:
+      writing: cable
+  # 0.1s is ten database round-trips a second per open connection, which is
+  # what made the demo feel laggy with a tab and a preview both subscribed.
+  polling_interval: 0.5.seconds
+  message_retention: 1.day
+
+test:
+  adapter: test
+
+production:
+  adapter: solid_cable
+  connects_to:
+    database:
+      writing: cable
+  polling_interval: 0.1.seconds
+  message_retention: 1.day

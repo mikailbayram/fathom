@@ -1,0 +1,22 @@
+default: &default
+  dispatchers:
+    - polling_interval: 1
+      batch_size: 500
+  workers:
+    - queues: "*"
+      # Crawling is allowed to occupy MAX_CONCURRENT_SCANS threads at once, so a
+      # worker with only that many threads has nothing left to run the stages
+      # that follow: extraction for a finished scan waits behind crawls that are
+      # still going. The thread count has to exceed the crawl ceiling.
+      threads: <%= ENV.fetch("JOB_THREADS", 8) %>
+      processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
+      polling_interval: 1
+
+development:
+  <<: *default
+
+test:
+  <<: *default
+
+production:
+  <<: *default

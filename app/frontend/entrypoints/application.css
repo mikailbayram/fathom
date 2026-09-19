@@ -1,0 +1,217 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@plugin '@tailwindcss/typography';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Fathom's visual identity: a neutral research surface, high-contrast
+  typography, hairline borders and a single restrained accent. Everything
+  else is whitespace and hierarchy.
+*/
+:root {
+  --radius: 0.5rem;
+
+  /* Canvas is grey and surfaces are white, so a panel reads as a panel.
+     Secondary text sits at 0.44 rather than the fashionable 0.55: at 14px on a
+     white surface that is the difference between legible and decorative. */
+  --background: oklch(0.968 0.002 250);
+  --surface: oklch(1 0 0);
+  --foreground: oklch(0.17 0.005 260);
+
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+
+  /* Primary is near-black: the accent is reserved for links, focus and the one
+     thing on a screen that is genuinely interactive. */
+  --primary: oklch(0.19 0.004 260);
+  --primary-foreground: oklch(0.99 0 0);
+
+  --secondary: oklch(0.955 0.002 255);
+  --secondary-foreground: oklch(0.23 0.005 260);
+
+  --muted: oklch(0.955 0.002 255);
+  --muted-foreground: oklch(0.44 0.006 258);
+
+  --accent: oklch(0.94 0.003 255);
+  --accent-foreground: oklch(0.2 0.005 260);
+
+  --brand: oklch(0.52 0.19 258);
+  --brand-foreground: oklch(0.99 0 0);
+
+  --destructive: oklch(0.52 0.2 27);
+
+  --border: oklch(0.885 0.003 255);
+  --border-strong: oklch(0.82 0.004 255);
+  --input: oklch(0.87 0.003 255);
+  --ring: oklch(0.52 0.19 258);
+
+  /* Semantic evidence colours. Never the sole carrier of meaning. */
+  --positive: oklch(0.47 0.13 155);
+  --positive-surface: oklch(0.96 0.03 155);
+  --negative: oklch(0.52 0.19 25);
+  --negative-surface: oklch(0.96 0.025 25);
+  --warning: oklch(0.55 0.13 70);
+  --warning-surface: oklch(0.96 0.04 75);
+}
+
+.dark {
+  --background: oklch(0.155 0.004 260);
+  --surface: oklch(0.2 0.005 260);
+  --foreground: oklch(0.97 0.002 250);
+
+  --card: oklch(0.2 0.005 260);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.2 0.005 260);
+  --popover-foreground: var(--foreground);
+
+  --primary: oklch(0.97 0.002 250);
+  --primary-foreground: oklch(0.17 0.005 260);
+
+  --secondary: oklch(0.25 0.005 260);
+  --secondary-foreground: oklch(0.97 0.002 250);
+
+  --muted: oklch(0.25 0.005 260);
+  --muted-foreground: oklch(0.72 0.006 258);
+
+  --accent: oklch(0.28 0.006 260);
+  --accent-foreground: oklch(0.97 0.002 250);
+
+  --brand: oklch(0.7 0.16 258);
+  --brand-foreground: oklch(0.17 0.005 260);
+
+  --destructive: oklch(0.65 0.19 25);
+
+  --border: oklch(1 0 0 / 14%);
+  --border-strong: oklch(1 0 0 / 24%);
+  --input: oklch(1 0 0 / 18%);
+  --ring: oklch(0.7 0.16 258);
+
+  --positive: oklch(0.74 0.15 155);
+  --positive-surface: oklch(0.26 0.04 155);
+  --negative: oklch(0.7 0.17 25);
+  --negative-surface: oklch(0.26 0.04 25);
+  --warning: oklch(0.8 0.13 75);
+  --warning-surface: oklch(0.27 0.04 75);
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 2px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 2px);
+  --radius-xl: calc(var(--radius) + 6px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-surface: var(--surface);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-positive: var(--positive);
+  --color-positive-surface: var(--positive-surface);
+  --color-negative: var(--negative);
+  --color-negative-surface: var(--negative-surface);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+
+  /* One typeface, two widths. Geist is Vercel's own grotesque; everything a
+     reader might copy or verify goes in Geist Mono. */
+  --font-sans: 'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  /* Headings tighten as they grow, the way a grotesque wants to be set. */
+  --tracking-tighter: -0.035em;
+  --tracking-tight: -0.022em;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/40;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    /* Denser base size than browser default: the whole product reads at 14px. */
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+
+  /* The buyer's question, wherever it appears: the tightest, heaviest line on
+     the page. Weight and tracking carry the hierarchy now, not a second family. */
+  .question {
+    font-weight: 500;
+    letter-spacing: var(--tracking-tight);
+    text-wrap: balance;
+  }
+
+  h1, h2, h3 {
+    letter-spacing: var(--tracking-tight);
+  }
+
+  /* Section labels. Sentence case at small size reads denser than small caps,
+     which is the Linear habit. */
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: -0.006em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Reserved for genuinely machine-ish annotation: statuses and units. */
+  .label-mono {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Tabular figures everywhere a number is compared against another number. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    @apply bg-primary/15;
+  }
+
+  /* One hairline, used everywhere a section ends. Borders do the work that
+     cards would otherwise be doing. */
+  .rule {
+    @apply border-b border-border;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

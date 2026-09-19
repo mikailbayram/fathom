@@ -1,0 +1,23 @@
+# Acme Enterprise Deployment Guide
+
+This guide covers the operational commitments Acme makes to enterprise customers.
+
+## Availability
+
+Acme commits to 99.9% monthly uptime on the Enterprise plan. Service credits are issued against the following month's invoice when the commitment is missed.
+
+## Recovery objectives
+
+Acme's documented recovery point objective (RPO) is 15 minutes and its recovery time objective (RTO) is 4 hours for a regional outage. These objectives apply to the primary region; failover to a secondary region is operated by Acme and requires no action from the customer.
+
+## Backups
+
+Customer data is backed up hourly and retained for 35 days. Restoration from backup is tested quarterly, and the results of the most recent restoration test are available on request.
+
+## Incident response
+
+Enterprise customers have a named support contact and a 24x7 escalation path for production incidents. Severity one incidents receive a response within 30 minutes at any hour.
+
+## Support tiers
+
+Starter includes email support with a next business day response. Business includes priority support with a four hour response during business hours. Enterprise includes 24x7 support with a one hour response for severity one issues.

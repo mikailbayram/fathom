@@ -1,0 +1,71 @@
+# PostgreSQL with the pgvector extension.
+#
+# The development database is provided by docker-compose.yml:
+#
+#   docker compose up -d
+#
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  # A worker thread running a fanned-out stage opens AI_CALL_CONCURRENCY threads
+  # of its own, each writing to the usage ledger, so the pool has to cover the job
+  # threads multiplied by that fan-out rather than the job threads alone.
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 25 } %>
+  host: <%= ENV.fetch("POSTGRES_HOST", "localhost") %>
+  port: <%= ENV.fetch("POSTGRES_PORT", 5433) %>
+  username: <%= ENV.fetch("POSTGRES_USER", "fathom") %>
+  password: <%= ENV.fetch("POSTGRES_PASSWORD", "fathom") %>
+
+development:
+  primary:
+    <<: *default
+    database: <%= ENV.fetch("POSTGRES_DATABASE", "fathom_development") %>
+  cache:
+    <<: *default
+    database: <%= ENV.fetch("POSTGRES_DATABASE", "fathom_development") %>_cache
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *default
+    database: <%= ENV.fetch("POSTGRES_DATABASE", "fathom_development") %>_queue
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *default
+    database: <%= ENV.fetch("POSTGRES_DATABASE", "fathom_development") %>_cable
+    migrations_paths: db/cable_migrate
+
+# Warning: The database defined as "test" will be erased and
+# re-generated from your development database when you run "rake".
+# Do not set this db to the same as development or production.
+test:
+  primary:
+    <<: *default
+    database: fathom_test<%= ENV["TEST_ENV_NUMBER"] %>
+  cache:
+    <<: *default
+    database: fathom_test<%= ENV["TEST_ENV_NUMBER"] %>_cache
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *default
+    database: fathom_test<%= ENV["TEST_ENV_NUMBER"] %>_queue
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *default
+    database: fathom_test<%= ENV["TEST_ENV_NUMBER"] %>_cable
+    migrations_paths: db/cable_migrate
+
+production:
+  primary: &production_primary
+    <<: *default
+    url: <%= ENV["DATABASE_URL"] %>
+  cache:
+    <<: *production_primary
+    database: fathom_production_cache
+    migrations_paths: db/cache_migrate
+  queue:
+    <<: *production_primary
+    database: fathom_production_queue
+    migrations_paths: db/queue_migrate
+  cable:
+    <<: *production_primary
+    database: fathom_production_cable
+    migrations_paths: db/cable_migrate

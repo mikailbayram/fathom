@@ -1,0 +1,11 @@
+# Sitemap for the deterministic fake company. One URL per line.
+https://acme.test/
+https://acme.test/product
+https://acme.test/pricing
+https://acme.test/security
+https://acme.test/integrations
+https://acme.test/about
+https://acme.test/blog/scaling-data-teams
+https://acme.test/blog/2024/03/quarterly-update
+https://acme.test/de/pricing
+https://acme.test/careers

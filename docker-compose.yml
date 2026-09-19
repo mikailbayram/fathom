@@ -1,0 +1,27 @@
+# Local development services. The only external dependency is PostgreSQL with
+# pgvector; everything else runs inside the Rails process.
+#
+#   docker compose up -d
+#
+name: fathom
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: fathom-postgres
+    environment:
+      POSTGRES_USER: fathom
+      POSTGRES_PASSWORD: fathom
+      POSTGRES_DB: fathom_development
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U fathom" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:
