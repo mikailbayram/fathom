@@ -38,6 +38,10 @@ env:
     - OPENAI_API_KEY
     - OPENROUTER_API_KEY
     - FIRECRAWL_API_KEY
+    # Unset, these refuse every request in production rather than opening the
+    # app up. A deploy that forgets them fails closed and says 401.
+    - FATHOM_USERNAME
+    - FATHOM_PASSWORD
   clear:
     APP_MODE: live
     ENABLE_LIVE_AI: true

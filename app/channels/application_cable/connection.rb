@@ -3,9 +3,14 @@ module ApplicationCable
   # to claim is the signed visitor cookie it already carries, which is what
   # scopes it to its own conversation and nobody else's.
   class Connection < ActionCable::Connection::Base
-    identified_by :visitor_id
+    identified_by :visitor_id, :operator
 
     def connect
+      # Set by the controller once the shared password was given. Demo visitors
+      # never have it, which is what keeps scan progress off a prospect's socket.
+      self.operator = Fathom::BasicAuth.optional?(request) ||
+                      cookies.signed[Fathom::BasicAuth::OPERATOR_COOKIE].present?
+
       # Same reason the controller accepts one: an embedded widget is a
       # third-party iframe and gets no cookie.
       from_param = request.params[VisitorSession::VISITOR_PARAM].to_s

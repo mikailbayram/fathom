@@ -13,6 +13,11 @@ module Fathom
     USERNAME_VAR = "FATHOM_USERNAME"
     PASSWORD_VAR = "FATHOM_PASSWORD"
 
+    # Action Cable authenticates on the WebSocket handshake, where Basic
+    # credentials are not reliably re-sent by the browser. So passing the
+    # password sets this signed cookie, and the socket reads that instead.
+    OPERATOR_COOKIE = :fathom_operator
+
     class << self
       def credentials
         username = ENV[USERNAME_VAR].to_s
@@ -24,9 +29,12 @@ module Fathom
 
       def configured? = !credentials.nil?
 
-      # Only a local request, in development, with nothing configured.
+      # Only when nothing is configured, and only for a request from the
+      # machine Rails is running on in development or test. Credentials that
+      # exist are always enforced, including locally -- an exception that
+      # outranks a configured password is not a password.
       def optional?(request)
-        Rails.env.local? && request.local?
+        !configured? && Rails.env.local? && request.local?
       end
 
       def valid?(username, password)

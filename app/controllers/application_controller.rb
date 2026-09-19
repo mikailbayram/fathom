@@ -14,11 +14,18 @@ class ApplicationController < ActionController::Base
 
   private
     def authenticate_operator
-      credentials = Fathom::BasicAuth.credentials
-      return if credentials.nil? && Fathom::BasicAuth.optional?(request)
+      return if Fathom::BasicAuth.optional?(request)
 
-      authenticate_or_request_with_http_basic("Fathom") do |username, password|
+      authenticated = authenticate_or_request_with_http_basic("Fathom") do |username, password|
         Fathom::BasicAuth.valid?(username, password)
       end
+      mark_operator if authenticated
+    end
+
+    # The socket cannot ask for a password, so it trusts this instead.
+    def mark_operator
+      cookies.signed[Fathom::BasicAuth::OPERATOR_COOKIE] = {
+        value: true, expires: 12.hours, httponly: true, same_site: :lax
+      }
     end
 end

@@ -13,6 +13,11 @@ class ScanChannel < ApplicationCable::Channel
   LIST_STREAM = "leads:list"
 
   def subscribed
+    # Everything this streams is internal: which companies are being scanned,
+    # how far along, and what it cost. A demo visitor has a valid connection and
+    # no business here.
+    return reject unless operator
+
     return stream_from(LIST_STREAM) if params[:lead_id].blank?
 
     lead = Lead.find_by(id: params[:lead_id])

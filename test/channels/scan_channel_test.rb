@@ -5,7 +5,7 @@ class ScanChannelTest < ActionCable::Channel::TestCase
 
   setup do
     @scan = Scan.start!(Lead.for_website("https://acme.test"))
-    stub_connection(visitor_id: SecureRandom.uuid)
+    stub_connection(visitor_id: SecureRandom.uuid, operator: true)
   end
 
   test "streams one lead's progress to anyone watching that lead" do
@@ -20,6 +20,16 @@ class ScanChannelTest < ActionCable::Channel::TestCase
 
     assert_predicate subscription, :confirmed?
     assert_has_stream ScanChannel::LIST_STREAM
+  end
+
+  test "refuses a demo visitor, who has a valid connection and no business here" do
+    stub_connection(visitor_id: SecureRandom.uuid, operator: false)
+    subscribe(lead_id: @scan.lead_id)
+
+    assert_predicate subscription, :rejected?
+
+    subscribe
+    assert_predicate subscription, :rejected?
   end
 
   test "rejects a subscription to a lead that does not exist" do

@@ -26,6 +26,13 @@ ENV["AI_ANALYSIS_MODEL"] = "gpt-5.6-terra"
 ENV["AI_CHAT_MODEL"] = "gpt-5.6-terra"
 ENV.delete("AI_EMBEDDING_PROVIDER")
 
+# Same reason the model routing is pinned below: dotenv loads the developer's
+# .env here too, and a real password in it would 401 every integration request.
+# The suite runs with no credentials, and the tests that are about the wall set
+# them with with_env.
+ENV.delete("FATHOM_USERNAME")
+ENV.delete("FATHOM_PASSWORD")
+
 require_relative "../config/environment"
 require "rails/test_help"
 require "inertia_rails/minitest"
