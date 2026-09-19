@@ -7,10 +7,10 @@ image: fathom
 # wedged crawl cannot take the web process down with it.
 servers:
   web:
-    - 5.78.109.102
+    - 2.28.239.107
   job:
     hosts:
-      - 5.78.109.102
+      - 2.28.239.107
     cmd: bin/jobs
     env:
       clear:
@@ -53,9 +53,11 @@ env:
     AI_PROVIDER: openrouter
     AI_EMBEDDING_PROVIDER: openai
     RAILS_MAX_THREADS: 3
-    WEB_CONCURRENCY: 2
+    WEB_CONCURRENCY: 1
     JOB_THREADS: 8
-    SOLID_QUEUE_IN_PUMA: false
+    # SOLID_QUEUE_IN_PUMA is deliberately absent. config/puma.rb tests the
+    # variable for presence, so "false" would still load the plugin and the
+    # web container would run a second supervisor.
 
 aliases:
   console: app exec --interactive --reuse "bin/rails console"
@@ -76,7 +78,7 @@ builder:
 accessories:
   db:
     image: pgvector/pgvector:pg17
-    host: 5.78.109.102
+    host: 2.28.239.107
     # Loopback only: reachable from the app containers over Kamal's Docker
     # network as host "fathom-db", never from the public internet.
     port: "127.0.0.1:5432:5432"
@@ -91,10 +93,10 @@ accessories:
     # pg_hba.conf, which then does not exist and the server will not boot.
     cmd: >
       postgres
-      -c shared_buffers=2GB
-      -c effective_cache_size=4GB
-      -c maintenance_work_mem=1GB
-      -c work_mem=32MB
-      -c max_connections=100
+      -c shared_buffers=512MB
+      -c effective_cache_size=2GB
+      -c maintenance_work_mem=256MB
+      -c work_mem=8MB
+      -c max_connections=75
     directories:
       - data:/var/lib/postgresql/data

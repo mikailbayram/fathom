@@ -57,15 +57,19 @@ production:
   primary: &production_primary
     <<: *default
     url: <%= ENV["DATABASE_URL"] %>
+  # Each of these needs its own URL, not a database: override. A url inherited
+  # from the anchor wins over the database: key beside it, so overrides here
+  # silently resolved to the primary database and db:prepare skipped their
+  # schemas as already loaded.
   cache:
     <<: *production_primary
-    database: fathom_production_cache
+    url: <%= ENV["CACHE_DATABASE_URL"] %>
     migrations_paths: db/cache_migrate
   queue:
     <<: *production_primary
-    database: fathom_production_queue
+    url: <%= ENV["QUEUE_DATABASE_URL"] %>
     migrations_paths: db/queue_migrate
   cable:
     <<: *production_primary
-    database: fathom_production_cable
+    url: <%= ENV["CABLE_DATABASE_URL"] %>
     migrations_paths: db/cable_migrate
