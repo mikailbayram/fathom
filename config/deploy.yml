@@ -19,13 +19,19 @@ servers:
         # threads starve waiting for connections.
         RAILS_MAX_THREADS: 10
 
+# How long a new container has to pass its health check. First boot runs
+# db:prepare against four empty databases and loads a schema with an HNSW
+# index, which does not fit in the 30s default.
+deploy_timeout: 120
+
 proxy:
   ssl: true
   host: fathom.solution404.io
   healthcheck:
     path: /up
-    # First boot runs db:prepare against four empty databases; 30s is not enough.
-    timeout: 90
+    # How long one probe may take, not how long boot may take -- that is
+    # deploy_timeout above.
+    timeout: 10
 
 # Kamal runs a registry:3 container locally and SSH-forwards port 5555 to the
 # deploy hosts, so they pull through the tunnel. No external registry, no
@@ -36,7 +42,12 @@ registry:
 env:
   secret:
     - RAILS_MASTER_KEY
+    # All four: db:prepare touches every configured database, and a missing URL
+    # falls back to the localhost:5433 default meant for docker-compose.
     - DATABASE_URL
+    - CACHE_DATABASE_URL
+    - QUEUE_DATABASE_URL
+    - CABLE_DATABASE_URL
     - OPENAI_API_KEY
     - OPENROUTER_API_KEY
     - FIRECRAWL_API_KEY
