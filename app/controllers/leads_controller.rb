@@ -1,7 +1,7 @@
 class LeadsController < ApplicationController
   include VisitorSession
 
-  before_action :set_lead, only: %i[show status rescan]
+  before_action :set_lead, only: %i[show status rescan stop destroy_scan]
   # The Action Cable connection authenticates with this cookie and a rejected
   # subscription never retries, so it has to exist before either page renders --
   # not only before the first demo message.
@@ -60,6 +60,25 @@ class LeadsController < ApplicationController
     else
       scan.resume!
     end
+
+    redirect_to lead_path(@lead)
+  end
+
+  # Halts a running scan. What it has already found stays on the page.
+  def stop
+    @lead.latest_scan&.stop!
+
+    redirect_to lead_path(@lead)
+  end
+
+  # Throws the scan away: its pages, passages, claims, findings and demo. The
+  # usage ledger is deliberately left behind, because what a scan cost is still
+  # true after the scan is gone.
+  def destroy_scan
+    scan = @lead.latest_scan
+    scan&.stop!
+    scan&.destroy
+    ScanChannel.broadcast_removed(@lead)
 
     redirect_to lead_path(@lead)
   end

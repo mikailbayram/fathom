@@ -20,10 +20,11 @@ class Scan < ApplicationRecord
     creating_chatbot
     completed
     failed
+    stopped
   ].freeze
 
   # Ordered as the pipeline runs them, which is what the progress UI walks.
-  STAGES = (STATUSES - %w[pending completed failed]).freeze
+  STAGES = (STATUSES - %w[pending completed failed stopped]).freeze
 
   belongs_to :lead
 
@@ -49,13 +50,16 @@ class Scan < ApplicationRecord
     create!(lead: lead, status: :pending, mode: WebsiteIntelligence.mode.to_s).tap(&:broadcast_status!)
   end
 
-  def running? = !completed? && !failed?
+  def running? = !finished?
 
   def work = Work.new(self)
 
   def stalled? = running? && !pending? && work.pending? == false
 
-  def finished? = completed? || failed?
+  # Nothing more will happen to a finished scan without someone asking. Stopped
+  # belongs here with completed and failed: the pipeline refuses to advance one,
+  # and Admission stops counting it as live.
+  def finished? = completed? || failed? || stopped?
 
   # Claims a stage for exactly one caller, and reports whether this call is the
   # one that got it.
@@ -91,6 +95,23 @@ class Scan < ApplicationRecord
       broadcast_status!
       true
     end
+  end
+
+  # Halts a scan wherever it happens to be.
+  #
+  # Everything already crawled, indexed and scored stays -- this calls off the
+  # work that had not happened yet, it does not undo the work that had. Queued
+  # jobs are discarded so nothing restarts the pipeline behind our back; a job
+  # already on a worker thread finds the scan finished and returns without
+  # doing its stage.
+  def stop!
+    return false if finished?
+
+    update!(status: :stopped, failed_at: nil, failed_stage: nil, error_message: nil)
+    work.discard_pending!
+    Admission.release!
+    broadcast_status!
+    true
   end
 
   def complete!

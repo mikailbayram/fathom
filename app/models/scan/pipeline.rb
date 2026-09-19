@@ -173,7 +173,7 @@ class Scan
         case stage
         when "mapping" then counted(facts.urls_discovered, "URL", "discovered")
         when "classifying" then classified_detail
-        when "planning" then counted(facts.pages_selected, "relevant page", "selected")
+        when "planning" then planned_detail
         when "crawling" then facts.pages_selected.positive? ? "#{delimited(facts.pages_crawled)} / #{delimited(facts.pages_selected)} pages" : nil
         when "processing" then counted(facts.pages_indexed, "page", "prepared")
         when "embedding" then counted(facts.chunks, "passage", "indexed")
@@ -184,6 +184,17 @@ class Scan
         when "auditing_coverage" then counted(scan.findings.where(kind: "missing").count, "unanswered question", "found")
         when "creating_chatbot" then facts.chatbot&.name
         end
+      end
+
+      # The mapped count is every public URL the site admits to, which on a big
+      # site is thousands and reliably reads as "it is about to crawl all of
+      # that". Naming the budget next to it is the difference between alarm and
+      # information.
+      def planned_detail
+        selected = counted(facts.pages_selected, "relevant page", "selected")
+        return selected if selected.nil?
+
+        "#{selected} of #{delimited(WebsiteIntelligence.config.max_pages_per_scan)} allowed"
       end
 
       def classified_detail

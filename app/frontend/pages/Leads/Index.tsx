@@ -21,6 +21,7 @@ interface LeadRow {
   pages_crawled: number
   scanned_at: string | null
   waiting_for_slot?: boolean
+  stopped?: boolean
   stage_label?: string | null
   demo_path: string | null
 }

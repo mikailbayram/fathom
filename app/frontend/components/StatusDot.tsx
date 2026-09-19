@@ -1,12 +1,14 @@
 import { cn } from "@/lib/utils"
 
-type State = "queued" | "running" | "waiting" | "stalled" | "complete" | "failed" | "idle"
+type State = "queued" | "running" | "waiting" | "stalled" | "stopped" | "complete" | "failed" | "idle"
 
 const COPY: Record<State, string> = {
   queued: "Queued",
   running: "Scanning",
   waiting: "Waiting for a slot",
-  stalled: "Stopped",
+  // "Stalled" rather than "Stopped": the worker died, nobody chose this.
+  stalled: "Stalled",
+  stopped: "Stopped",
   complete: "Ready",
   failed: "Failed",
   idle: "Not scanned",
@@ -31,6 +33,7 @@ export function StatusDot({ state, label, className }: { state: State; label?: s
           state === "running" && "animate-pulse bg-brand",
           state === "waiting" && "bg-warning",
           state === "stalled" && "bg-warning",
+          state === "stopped" && "bg-border-strong",
           state === "complete" && "bg-positive",
           state === "failed" && "bg-destructive",
           state === "idle" && "bg-border-strong",
@@ -45,11 +48,13 @@ export function leadState(lead: {
   running: boolean
   failed: boolean
   stalled?: boolean
+  stopped?: boolean
   waiting_for_slot?: boolean
   status?: string | null
 }): State {
   if (lead.failed) return "failed"
   if (lead.status === "completed") return "complete"
+  if (lead.status === "stopped") return "stopped"
   if (lead.status === "pending") return "queued"
   if (lead.waiting_for_slot) return "waiting"
   if (lead.stalled) return "stalled"

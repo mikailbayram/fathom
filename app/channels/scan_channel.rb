@@ -26,6 +26,12 @@ class ScanChannel < ApplicationCable::Channel
     stream_for lead
   end
 
+  # A deleted scan has no status to send, but the list still has a row to
+  # redraw.
+  def self.broadcast_removed(lead)
+    ActionCable.server.broadcast(LIST_STREAM, { lead_id: lead.id, status: nil })
+  end
+
   def self.broadcast_status(scan)
     broadcast_to(scan.lead, LeadPresenter.new(scan.lead).status)
     ActionCable.server.broadcast(LIST_STREAM, { lead_id: scan.lead_id, status: scan.status })

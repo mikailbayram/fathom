@@ -43,6 +43,10 @@ class CrawlPagesJob < PipelineJob
 
     batch.each_with_index do |discovered_url, index|
       sleep(PACE) if index.positive?
+      # A batch of ten paced requests is twelve seconds of crawling. Someone who
+      # pressed stop should not watch ten more pages arrive first.
+      return if scan.reload.finished?
+
       crawl.fetch(discovered_url)
     end
 

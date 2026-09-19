@@ -8,6 +8,11 @@ Rails.application.routes.draw do
     member do
       get :status
       post :rescan
+      # Both act on the lead's latest scan, which is the only one the page ever
+      # shows. Naming a scan id here would let a stale tab stop or delete
+      # something the person is no longer looking at.
+      post :stop
+      delete :scan, action: :destroy_scan
     end
   end
 

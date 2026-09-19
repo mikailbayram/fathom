@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, router } from "@inertiajs/react"
-import { ArrowLeft, ArrowUpRight, Check, Copy, RotateCw } from "lucide-react"
+import { ArrowLeft, ArrowUpRight, Check, Copy, RotateCw, Square, Trash2 } from "lucide-react"
 import AppLayout from "@/layouts/AppLayout"
 import { Button } from "@/components/ui/button"
 import { ScanProgress } from "@/components/ScanProgress"
@@ -123,11 +123,41 @@ function LeadView({ lead, status, tab }: { lead: LeadDetail; status: StatusPaylo
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          {/* Stop is offered only while there is something to stop, and sits
+              before Rescan so the destructive-ish one is not where the
+              habitual click lands. */}
+          {state.running && (
+            <Button variant="outline" size="sm" onClick={() => router.post(`/leads/${lead.id}/stop`)}>
+              <Square className="size-3.5" />
+              Stop
+            </Button>
+          )}
+
           <Button variant="outline" size="sm" onClick={() => router.post(`/leads/${lead.id}/rescan`)}>
             <RotateCw className="size-3.5" />
-            {lead.scans_count === 0 ? "Scan" : "Rescan"}
+            {lead.scans_count === 0 ? "Scan" : state.running ? "Restart" : "Rescan"}
           </Button>
+
+          {lead.scans_count > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              aria-label="Delete this scan"
+              onClick={() => {
+                // A browser confirm, because this throws away the pages, the
+                // gaps and the demo link, and the work cost real money to
+                // produce. Nothing here can put it back.
+                if (window.confirm(`Delete this scan of ${lead.name}? Its pages, gaps and demo link go with it.`)) {
+                  router.delete(`/leads/${lead.id}/scan`)
+                }
+              }}
+            >
+              <Trash2 className="size-3.5" />
+              Delete
+            </Button>
+          )}
+
           {lead.demo && <CopyLink path={lead.demo.path} />}
         </div>
       </header>
@@ -142,6 +172,12 @@ function LeadView({ lead, status, tab }: { lead: LeadDetail; status: StatusPaylo
         </div>
       ) : !complete ? (
         <div className="mt-8 max-w-xl">
+          {(live.status ?? lead.status) === "stopped" && (
+            <p className="mb-5 rounded-lg border border-border bg-muted/50 px-4 py-3 text-[0.8125rem] leading-relaxed text-foreground">
+              <span className="font-medium">You stopped this scan.</span> Everything it had already found is below.
+              <span className="font-medium"> Rescan</span> picks up from where it left off.
+            </p>
+          )}
           {live.stalled && (
             <p className="mb-5 rounded-lg border border-border bg-warning-surface px-4 py-3 text-[0.8125rem] leading-relaxed text-foreground">
               <span className="font-medium">This scan has unfinished work.</span> No jobs are queued or running.

@@ -14,6 +14,17 @@ class Scan
       jobs.where(finished_at: nil).where.missing(:failed_execution).exists? if available?
     end
 
+    # Throws away this scan's queued work. A claimed job is already running on
+    # a worker thread and is left alone: killing it mid-fetch would leave a page
+    # half-written, and PipelineJob stops it at the next stage boundary anyway.
+    def discard_pending!
+      return 0 unless available?
+
+      pending = jobs.where(finished_at: nil).where.missing(:claimed_execution).to_a
+      pending.each(&:discard)
+      pending.size
+    end
+
     def blocked?
       available? && jobs.joins(:blocked_execution).exists?
     end

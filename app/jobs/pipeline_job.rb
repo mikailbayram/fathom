@@ -15,6 +15,27 @@ class PipelineJob < ApplicationJob
     Rails.logger.error("#{job.class.name} gave up on scan #{scan&.id}: #{error.class}: #{error.message}")
   end
 
+  # Stop means stop, not "stop after this stage".
+  #
+  # Discarding the queue cannot reach a job a worker has already claimed, so
+  # every stage checks the scan before it does anything. Without this, stopping
+  # during the crawl would still leave a company analysis and an embedding bill
+  # behind it.
+  around_perform do |job, block|
+    scan = job.scan_for_arguments
+    next if scan&.reload&.finished?
+
+    block.call
+  end
+
+  # Stages take a scan, a claim or a finding; all three can name their scan.
+  def scan_for_arguments
+    subject = arguments.first
+    subject.respond_to?(:scan) ? subject.scan : subject
+  rescue ActiveRecord::RecordNotFound
+    nil
+  end
+
   # The pipeline stage this job belongs to, used for failure reporting.
   def stage = self.class.name.underscore.delete_suffix("_job")
 
