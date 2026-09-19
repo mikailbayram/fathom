@@ -78,7 +78,10 @@ function Column({
   const absent = state === "absent"
 
   return (
-    <section className={cn("bg-background p-5 md:p-6", absent && "bg-muted/40")}>
+    // min-w-0 for the same reason as SourceLink: a grid item defaults to
+    // min-width:auto, so anything unbreakable inside it -- a documentation URL
+    // -- would widen the column past the screen instead of being truncated.
+    <section className={cn("min-w-0 bg-background p-5 md:p-6", absent && "bg-muted/40")}>
       <div className="label-mono uppercase text-muted-foreground">{label}</div>
 
       <div className="mt-4 flex items-baseline gap-3">

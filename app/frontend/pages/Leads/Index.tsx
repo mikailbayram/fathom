@@ -124,7 +124,10 @@ export default function Index({
                 href={`/leads/${lead.id}`}
                 className="flex flex-wrap items-center gap-x-5 gap-y-1.5 px-4 py-3 outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
               >
-                <span className="min-w-0 flex-1">
+                {/* The name takes the whole line on a phone and the counters
+                    wrap beneath it. Sharing one line leaves it about sixty
+                    pixels, which is enough for "1fac..." and nothing else. */}
+                <span className="w-full min-w-0 sm:w-auto sm:flex-1">
                   <span className="block truncate text-[0.875rem] font-medium tracking-tight text-foreground">
                     {lead.name}
                   </span>

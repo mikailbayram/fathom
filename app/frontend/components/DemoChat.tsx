@@ -265,9 +265,9 @@ function Bubble({ message }: { message: Message }) {
                   rel="noopener noreferrer"
                   className="group flex flex-col rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <span className="flex items-center gap-1 text-[0.75rem] font-medium text-foreground group-hover:underline underline-offset-4">
-                    {source.title}
-                    <ArrowUpRight className="size-3 text-muted-foreground" />
+                  <span className="flex min-w-0 items-center gap-1 text-[0.75rem] font-medium text-foreground group-hover:underline underline-offset-4">
+                    <span className="truncate">{source.title}</span>
+                    <ArrowUpRight className="size-3 shrink-0 text-muted-foreground" />
                   </span>
                   <span className="break-all font-mono text-[0.625rem] text-muted-foreground">{source.url}</span>
                 </a>
