@@ -26,7 +26,7 @@ ENV["AI_ANALYSIS_MODEL"] = "gpt-5.6-terra"
 ENV["AI_CHAT_MODEL"] = "gpt-5.6-terra"
 ENV.delete("AI_EMBEDDING_PROVIDER")
 
-# Same reason the model routing is pinned below: dotenv loads the developer's
+# Same reason the model routing is pinned above: dotenv loads the developer's
 # .env here too, and a real password in it would 401 every integration request.
 # The suite runs with no credentials, and the tests that are about the wall set
 # them with with_env.
