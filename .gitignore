@@ -49,3 +49,7 @@ node_modules
 
 # Playwright MCP scratch output
 /.playwright-mcp/
+
+# A git worktree Claude Code checks out inside the repo. Local scratch, and
+# committing a whole second checkout would be a mess.
+/.claude/worktrees/
