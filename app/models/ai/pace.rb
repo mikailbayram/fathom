@@ -5,11 +5,11 @@ module AI
   #
   #   AI::Pace.wait_for(model)   # returns once it is this call's turn
   #
-  # Providers meter requests per minute per model, and that is not a ceiling
-  # concurrency can respect: OpenRouter allows a new account 20 requests a
-  # minute, while an analysis call takes about two and a half seconds, so even
-  # one strictly sequential stream runs at twenty-four a minute. There is no
-  # concurrency setting low enough. Only spacing the calls works.
+  # OpenAI meters requests per minute per model, and that is not a ceiling
+  # concurrency can respect: at the 20 requests a minute this defaults to, and
+  # an analysis call taking about two and a half seconds, even one strictly
+  # sequential stream runs at twenty-four a minute. There is no concurrency
+  # setting low enough. Only spacing the calls works.
   #
   # Retrying a rejected call is still necessary -- see Client's backoff -- but a
   # retry is what happens when this failed. Waiting three seconds beats being
@@ -22,7 +22,7 @@ module AI
   # fix, and is worth doing the day a second worker exists, not before.
   module Pace
     # Requests per minute, by model role. Embeddings are excluded on purpose:
-    # they are a different model on a different account and have never been the
+    # they are a different model on a far higher limit and have never been the
     # constraint, and pacing them would slow every retrieval for nothing.
     DEFAULT_LIMIT = 20
 

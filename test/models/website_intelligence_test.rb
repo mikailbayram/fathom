@@ -57,32 +57,38 @@ class WebsiteIntelligenceTest < ActiveSupport::TestCase
     end
   end
 
-  test "routes the provider too, so an aggregator is an environment change" do
-    with_env("AI_PROVIDER" => "openrouter", "AI_ANALYSIS_MODEL" => "anthropic/claude-sonnet-4.5") do
+  test "routes the provider too, so leaving OpenAI is an environment change" do
+    with_env("AI_PROVIDER" => "anthropic", "AI_ANALYSIS_MODEL" => "claude-sonnet-4.5") do
       WebsiteIntelligence.reset_configuration!
 
-      assert_equal :openrouter, AI::Models.analysis.provider
-      assert_equal "anthropic/claude-sonnet-4.5", AI::Models.analysis.id
+      assert_equal :anthropic, AI::Models.analysis.provider
+      assert_equal "claude-sonnet-4.5", AI::Models.analysis.id
     end
+  end
+
+  test "routes every role to OpenAI by default" do
+    WebsiteIntelligence.reset_configuration!
+
+    assert_equal [ :openai ], AI::Models.all.values.map(&:provider).uniq
   end
 
   test "embeddings can stay with the provider that produced the stored vectors" do
     # Every vector in the database belongs to one model's space. Moving chat and
-    # analysis to an aggregator must not silently move embeddings with them, or
-    # new vectors stop being comparable to the ones already indexed.
-    with_env("AI_PROVIDER" => "openrouter", "AI_EMBEDDING_PROVIDER" => "openai") do
+    # analysis off OpenAI must not silently move embeddings with them, or new
+    # vectors stop being comparable to the ones already indexed.
+    with_env("AI_PROVIDER" => "anthropic", "AI_EMBEDDING_PROVIDER" => "openai") do
       WebsiteIntelligence.reset_configuration!
 
       assert_equal :openai, AI::Models.embedding.provider
-      assert_equal :openrouter, AI::Models.chat.provider
+      assert_equal :anthropic, AI::Models.chat.provider
     end
   end
 
   test "embeddings follow the default provider when nothing pins them" do
-    with_env("AI_PROVIDER" => "openrouter") do
+    with_env("AI_PROVIDER" => "anthropic") do
       WebsiteIntelligence.reset_configuration!
 
-      assert_equal :openrouter, AI::Models.embedding.provider
+      assert_equal :anthropic, AI::Models.embedding.provider
     end
   end
 
@@ -114,17 +120,17 @@ class WebsiteIntelligenceTest < ActiveSupport::TestCase
   end
 
   test "hands RubyLLM the key belonging to the provider in use" do
-    with_env("AI_PROVIDER" => "openrouter", "OPENROUTER_API_KEY" => "sk-or-test") do
+    with_env("AI_PROVIDER" => "anthropic", "ANTHROPIC_API_KEY" => "sk-ant-test") do
       WebsiteIntelligence.reset_configuration!
 
-      assert_equal({ openrouter_api_key: "sk-or-test" }, WebsiteIntelligence.ai_credentials)
+      assert_equal({ anthropic_api_key: "sk-ant-test" }, WebsiteIntelligence.ai_credentials)
     end
   end
 
   test "demands a key for every provider in use, and none for those that are not" do
-    # Moving every role to an aggregator should stop requiring an OpenAI key,
+    # Moving every role to another provider should stop requiring an OpenAI key,
     # and pinning embeddings back to OpenAI should start requiring it again.
-    with_env("AI_PROVIDER" => "openrouter", "OPENROUTER_API_KEY" => "sk-or-test",
+    with_env("AI_PROVIDER" => "anthropic", "ANTHROPIC_API_KEY" => "sk-ant-test",
              "AI_EMBEDDING_PROVIDER" => "openai", "OPENAI_API_KEY" => nil) do
       WebsiteIntelligence.reset_configuration!
 
@@ -134,12 +140,12 @@ class WebsiteIntelligenceTest < ActiveSupport::TestCase
   end
 
   test "names the provider when its key is missing rather than failing at the first call" do
-    with_env("AI_PROVIDER" => "openrouter", "OPENROUTER_API_KEY" => nil) do
+    with_env("AI_PROVIDER" => "anthropic", "ANTHROPIC_API_KEY" => nil) do
       WebsiteIntelligence.reset_configuration!
 
       error = assert_raises(WebsiteIntelligence::ConfigurationError) { WebsiteIntelligence.ai_credentials }
-      assert_match(/OPENROUTER_API_KEY is not set/, error.message)
-      assert_match(/:openrouter/, error.message)
+      assert_match(/ANTHROPIC_API_KEY is not set/, error.message)
+      assert_match(/:anthropic/, error.message)
     end
   end
 end

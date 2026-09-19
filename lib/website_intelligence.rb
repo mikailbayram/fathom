@@ -50,7 +50,7 @@ module WebsiteIntelligence
     # that cannot be switched freely. Every vector already in the database was
     # produced by one model in one vector space; point this somewhere else and
     # the stored embeddings stop being comparable to new ones, so every scan has
-    # to be re-indexed. Routing chat and analysis through an aggregator while
+    # to be re-indexed. Moving chat and analysis to another provider while
     # embeddings stay where they are is the change that costs nothing.
     def embedding_provider = @embedding_provider || provider
 
@@ -205,17 +205,17 @@ module WebsiteIntelligence
       live_ai_enabled?
     end
 
-    # The providers this configuration actually routes to. Usually one; two when
-    # embeddings are pinned to the provider that produced the stored vectors
-    # while everything else runs through an aggregator.
+    # The providers this configuration actually routes to. Usually one -- OpenAI
+    # -- and two only when embeddings are pinned to the provider that produced
+    # the stored vectors while everything else has moved elsewhere.
     def active_ai_providers = [ config.ai.provider, config.ai.embedding_provider ].uniq
 
     # RubyLLM names every provider's key <provider>_api_key and reads it from
     # <PROVIDER>_API_KEY, so the pair is derived rather than tabulated -- adding
     # a provider is then an environment change like everything else here.
     #
-    # Only the providers in use are demanded. Moving entirely to an aggregator
-    # should not keep requiring an OpenAI key that nothing will spend.
+    # Only the providers in use are demanded. Moving every role off OpenAI
+    # should not keep requiring a key that nothing will spend.
     def ai_credentials
       active_ai_providers.to_h do |provider|
         variable = "#{provider.to_s.upcase}_API_KEY"

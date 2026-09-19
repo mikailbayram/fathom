@@ -8,9 +8,9 @@ module AI
     class ResponseError < StandardError; end
 
     # A rate limit is a queueing problem, not a failure. Stages fan out several
-    # calls at once and providers meter per minute, so the first thing a new
-    # account meets is a 429 -- OpenRouter starts at 20 requests per minute per
-    # model. Failing the scan there would throw away every passage already read.
+    # calls at once and OpenAI meters requests per minute per model, so the
+    # first thing an account on a low usage tier meets is a 429. Failing the
+    # scan there would throw away every passage already read.
     #
     # Waits are long because the window being waited out is a minute: a burst of
     # six concurrent calls needs the limit to actually roll over, not a quick
@@ -72,7 +72,6 @@ module AI
         # registry: model routing is ours to decide, not the gem's to validate.
         chat = RubyLLM.chat(model: model.id, provider: model.provider, assume_model_exists: true)
         chat.with_thinking(effort: model.effort) if model.effort
-        chat.with_provider_options(usage_accounting) if usage_accounting
         chat.with_instructions(instructions)
         chat.with_schema(schema) if schema
 
@@ -87,16 +86,11 @@ module AI
         raise ResponseError, "#{model.id} failed during #{operation}: #{error.message}"
       end
 
-      # Because the model IDs above are never looked up in RubyLLM's registry,
-      # nothing local knows what a call costs -- the price has to come back with
-      # the response. OpenAI prices from the registry, but an aggregator bills
-      # its own rates and only reports them when asked. Without this the usage
-      # ledger records nulls, SpendingLimit reads those as zero, and a scan runs
-      # to the end of a site with no budget in force at all.
-      def usage_accounting
-        { usage: { include: true } } if model.provider.to_sym == :openrouter
-      end
-
+      # Cost comes from RubyLLM pricing the response against its registry; no
+      # usage option is asked of OpenAI. A model ID the registry does not know
+      # therefore records a null cost, which SpendingLimit reads as zero -- so a
+      # newly routed model wants checking against the ai_usages ledger before a
+      # scan is trusted to stay inside its budget.
       def record(message, started)
         AIUsage.record(
           operation: operation,

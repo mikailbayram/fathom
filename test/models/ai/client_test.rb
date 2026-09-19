@@ -91,7 +91,7 @@ class AI::ClientTest < ActiveSupport::TestCase
   test "asks for the reasoning effort the role carries" do
     calls = []
     thinking = []
-    chat = AI::Models::Model.new(role: :chat, id: "gpt-5.6-terra", provider: :openrouter, effort: :medium)
+    chat = AI::Models::Model.new(role: :chat, id: "gpt-5.6-terra", provider: :openai, effort: :medium)
 
     with_env(LIVE) do
       with_stub(RubyLLM, :chat, ->(**) { chat_double(calls: calls, thinking: thinking) }) do
