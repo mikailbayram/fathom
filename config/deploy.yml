@@ -63,6 +63,13 @@ env:
     # and changing the embedding model invalidates them.
     AI_PROVIDER: openrouter
     AI_EMBEDDING_PROVIDER: openai
+    # The budgets, named here because .env never leaves a developer's machine.
+    # Left out, production silently runs the code defaults -- 5,000 pages a
+    # scan -- and the first thing anyone notices is the crawler bill.
+    MAX_SCAN_PAGES: 60
+    MAX_SCAN_AI_COST_USD: 5.00
+    MAX_DAILY_AI_COST_USD: 50.00
+
     RAILS_MAX_THREADS: 3
     WEB_CONCURRENCY: 1
     JOB_THREADS: 8
