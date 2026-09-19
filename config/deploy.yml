@@ -21,7 +21,7 @@ servers:
 
 proxy:
   ssl: true
-  host: fathom.solution404testdomain.com
+  host: fathom.solution404.io
   healthcheck:
     path: /up
     # First boot runs db:prepare against four empty databases; 30s is not enough.
