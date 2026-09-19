@@ -62,11 +62,15 @@ module Website
         nil
       end
 
+      # Broadcast as well as written: this is the number the page shows moving
+      # while a crawl runs, and once per page is a rate a socket does not
+      # notice.
       def refresh_counters
         scan.update_columns(
           pages_crawled: scan.pages.count,
           updated_at: Time.current
         )
+        scan.broadcast_status!
       end
   end
 end

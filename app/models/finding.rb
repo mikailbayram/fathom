@@ -23,6 +23,18 @@ class Finding < ApplicationRecord
   # FrictionScore, so the badge and the score can never disagree.
   def discoverability_gap_points = (FrictionScore.new(self).gap * 100).round
 
+  # How hard a buyer would have to work to reach this. Judged during the
+  # buyer-visible check; the rule in SearchEffort covers anything scored before
+  # a model was ever asked.
+  def search_effort_band
+    return "dead_end" if kind == "missing"
+    return search_effort if SearchEffort.valid?(search_effort)
+
+    SearchEffort.derive(page: primary_source&.chunk&.page, coverage: buyer_visible_confidence, domain: scan.domain)
+  end
+
+  def search_effort_label = SearchEffort.label(search_effort_band)
+
   def buyer_importance_label
     case buyer_importance
     when 0.75.. then "High"

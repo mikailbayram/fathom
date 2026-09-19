@@ -20,6 +20,13 @@ module Fathom
     # Common ones are `templates`, `generators`, or `middleware`, for example.
     config.autoload_lib(ignore: %w[assets tasks website_intelligence.rb])
 
+    # Said on every response, not only in robots.txt: a demo link shared with a
+    # prospect gets forwarded, and a crawler that finds it that way never asks
+    # for robots.txt first. The header is what keeps it out of an index.
+    config.action_dispatch.default_headers.merge!(
+      "X-Robots-Tag" => "noindex, nofollow, noarchive, nosnippet"
+    )
+
     # Configuration for the application, engines, and railties goes here.
     #
     # These settings can be overridden in specific environments using the files

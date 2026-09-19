@@ -27,7 +27,12 @@ class CheckClaimVisibilityJob < ApplicationJob
     # webhooks; "retried six times with exponential backoff over 24 hours" is
     # not. The question is a label for a human; the statement is the fact we are
     # asking whether a buyer can reach.
-    buyer_visible = AI::Answerer.build(scan).answer(claim.statement, scope: :buyer_visible)
+    #
+    # The destination travels with it: whether a buyer gets there depends on
+    # both what the marketing pages say and how far the page holding the claim
+    # sits from them.
+    buyer_visible = AI::Answerer.build(scan).answer(claim.statement, scope: :buyer_visible,
+                                                    destination: claim.chunk&.page)
 
     persist(claim, buyer_visible)
     claim.update!(status: "checked")
@@ -47,6 +52,8 @@ class CheckClaimVisibilityJob < ApplicationJob
           buyer_importance: claim.buyer_importance,
           full_corpus_confidence: claim.support,
           buyer_visible_confidence: buyer_visible.coverage,
+          search_effort: buyer_visible.search_effort,
+          search_path: buyer_visible.search_path,
           status: "pending"
         )
         finding.save!

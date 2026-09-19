@@ -37,3 +37,22 @@ export function subscribeToConversation(
     },
   )
 }
+
+/**
+ * Scan progress. Passing a lead id subscribes to that lead's status payload;
+ * passing none subscribes to the list, which is told only that something moved
+ * and reloads its own props in response.
+ */
+export function subscribeToScan<T>(
+  leadId: number | null,
+  handlers: { onEvent: (event: T) => void; onConnected?: () => void; onDisconnected?: () => void },
+): Subscription {
+  return sharedConsumer().subscriptions.create(
+    leadId === null ? { channel: "ScanChannel" } : { channel: "ScanChannel", lead_id: leadId },
+    {
+      received: (data: never) => handlers.onEvent(data as T),
+      connected: () => handlers.onConnected?.(),
+      disconnected: () => handlers.onDisconnected?.(),
+    },
+  )
+}

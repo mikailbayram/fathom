@@ -24,23 +24,28 @@ module AI
       # should not put words into it.
       QUOTABLE_COVERAGE_RATIO = 0.9
 
-      def answer(question, scope: :all, candidates: nil)
+      def answer(question, scope: :all, candidates: nil, destination: nil)
         candidates ||= search.find(question, scope: scope)
-        return unanswered(scope) if candidates.empty?
+        return unanswered(scope, **effort(destination, 0.0)) if candidates.empty?
 
         terms = Terms.new(question)
         ranked = candidates.select { |candidate| terms.satisfied_by?(candidate.content) }
                            .map { |candidate| [ candidate, terms.coverage(candidate.content) ] }
                            .select { |_, coverage| coverage.positive? }
                            .sort_by { |candidate, coverage| [ -coverage, candidate.id ] }
-        return unanswered(scope, candidates, reasoning: thin_evidence_reason(candidates)) if ranked.empty?
+        if ranked.empty?
+          return unanswered(scope, candidates, reasoning: thin_evidence_reason(candidates), **effort(destination, 0.0))
+        end
 
         best = ranked.first.last
         supporting = ranked.select { |_, coverage| coverage >= best * SUPPORTING_COVERAGE_RATIO }
                            .first(MAX_SUPPORTING_CHUNKS)
 
         coverage = coverage_for(terms, supporting)
-        return unanswered(scope, candidates, coverage: coverage, reasoning: weak_reason(coverage)) if coverage < answerable_threshold
+        if coverage < answerable_threshold
+          return unanswered(scope, candidates, coverage: coverage, reasoning: weak_reason(coverage),
+                            **effort(destination, coverage))
+        end
 
         Answer.new(
           answerable: true,
@@ -49,11 +54,19 @@ module AI
           chunk_ids: supporting.map { |candidate, _| candidate.id },
           reasoning: reasoning_for(terms, supporting),
           candidates: candidates,
-          scope: scope
+          scope: scope,
+          **effort(destination, coverage)
         )
       end
 
       private
+        # No model to ask, so the rule that stands in for one decides -- the
+        # same rule that catches a live band outside the vocabulary.
+        def effort(destination, coverage)
+          band = SearchEffort.derive(page: destination, coverage: coverage, domain: scan.domain)
+          { search_effort: band, search_path: SearchEffort.meaning(band) }
+        end
+
         def answerable_threshold = ANSWERABLE_COVERAGE * COVERAGE_SCALE
 
         # Coverage is measured over the supporting passages together, so an

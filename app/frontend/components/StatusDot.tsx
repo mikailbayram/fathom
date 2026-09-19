@@ -15,8 +15,12 @@ const COPY: Record<State, string> = {
 /**
  * Status, carried by a word as well as a colour. The dot is an accent on the
  * label, never the label itself.
+ *
+ * `label` replaces the word for a running scan, so a row can say which stage it
+ * is in rather than saying "Scanning" for eleven minutes. The colour still
+ * comes from the state, so the override cannot contradict the dot.
  */
-export function StatusDot({ state, className }: { state: State; className?: string }) {
+export function StatusDot({ state, label, className }: { state: State; label?: string | null; className?: string }) {
   return (
     <span className={cn("inline-flex items-center gap-1.5 text-[0.75rem] text-muted-foreground", className)}>
       <span
@@ -32,7 +36,7 @@ export function StatusDot({ state, className }: { state: State; className?: stri
           state === "idle" && "bg-border-strong",
         )}
       />
-      {COPY[state]}
+      {(state === "running" && label) || COPY[state]}
     </span>
   )
 }

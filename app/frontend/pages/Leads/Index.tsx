@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { useForm, Link, router } from "@inertiajs/react"
 import { ArrowRight } from "lucide-react"
 import AppLayout from "@/layouts/AppLayout"
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { StatusDot, leadState } from "@/components/StatusDot"
 import { EmptyState } from "@/components/States"
+import { subscribeToScan } from "@/lib/cable"
 
 interface LeadRow {
   id: number
@@ -20,6 +21,7 @@ interface LeadRow {
   pages_crawled: number
   scanned_at: string | null
   waiting_for_slot?: boolean
+  stage_label?: string | null
   demo_path: string | null
 }
 
@@ -42,7 +44,7 @@ export default function Index({
   // A list of scans that never changes looks like a list of scans that are
   // stuck, which is exactly how several leads end up appearing to share one
   // status.
-  useLiveList(leads.some((lead) => lead.running))
+  useLiveList()
   const form = useForm({ website_url: "" })
 
   function submit(event: React.FormEvent) {
@@ -129,7 +131,7 @@ export default function Index({
                   <span className="block truncate font-mono text-[0.6875rem] text-muted-foreground">{lead.domain}</span>
                 </span>
 
-                <StatusDot state={leadState(lead)} />
+                <StatusDot state={leadState(lead)} label={lead.stage_label} />
 
                 {lead.status === "completed" && (
                   <span className="flex shrink-0 items-baseline gap-5 font-mono text-[0.6875rem] tabular text-muted-foreground">
@@ -148,16 +150,38 @@ export default function Index({
 }
 
 /** Refreshes the list while any scan is in flight, and stops when none are. */
-function useLiveList(anyRunning: boolean) {
+/**
+ * Reloads the rows when any scan moves.
+ *
+ * The broadcast says only that something changed; the rows themselves come back
+ * through Inertia, so the socket never carries a second copy of the row shape
+ * that could drift from the presenter.
+ *
+ * Coalesced, because a crawl broadcasts once per page and the list only shows
+ * counts. Subscribing unconditionally is deliberate: a scan started from
+ * another tab has to light this page up too, and there is no running scan here
+ * to gate on when it starts.
+ */
+function useLiveList() {
+  const pending = useRef<number | null>(null)
+
   useEffect(() => {
-    if (!anyRunning) return
+    const reload = () => {
+      if (pending.current !== null) return
 
-    const timer = setInterval(() => {
-      router.reload({ only: ["leads", "worker_running"] })
-    }, 3000)
+      pending.current = window.setTimeout(() => {
+        pending.current = null
+        router.reload({ only: ["leads", "worker_running"] })
+      }, 400)
+    }
 
-    return () => clearInterval(timer)
-  }, [anyRunning])
+    const subscription = subscribeToScan(null, { onEvent: reload, onConnected: reload })
+
+    return () => {
+      subscription.unsubscribe()
+      if (pending.current !== null) window.clearTimeout(pending.current)
+    }
+  }, [])
 }
 
 function ModeBadge({ mode, liveReady }: { mode: string; liveReady: boolean }) {

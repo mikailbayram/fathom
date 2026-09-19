@@ -40,6 +40,7 @@ module Website
       scan.discovered_urls.reset
       # Remapping invalidates the previous classification pass too.
       scan.update!(urls_discovered: records.size, urls_classified_at: nil, claims_extracted_at: nil, coverage_audited_at: nil)
+      scan.broadcast_status!
       self
     end
 

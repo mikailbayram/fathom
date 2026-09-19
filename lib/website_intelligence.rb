@@ -74,6 +74,7 @@ module WebsiteIntelligence
                   :max_pages_per_scan,
                   :max_scan_ai_cost_usd,
                   :max_daily_ai_cost_usd,
+                  :crawl_cost_per_request_usd,
                   :crawl_concurrency,
                   :embedding_batch_size,
                   :public_demo_rate_limit,
@@ -128,6 +129,12 @@ module WebsiteIntelligence
 
       @max_scan_ai_cost_usd = Float(ENV.fetch("MAX_SCAN_AI_COST_USD", 3.00))
       @max_daily_ai_cost_usd = Float(ENV.fetch("MAX_DAILY_AI_COST_USD", 10.00))
+
+      # The crawler meters credits against an account and never prices a single
+      # response, so what a scan cost to crawl can only be counted here and
+      # multiplied. The default is one credit per request at Firecrawl's
+      # published standard rate; an operator on another plan sets their own.
+      @crawl_cost_per_request_usd = Float(ENV.fetch("CRAWL_COST_PER_REQUEST_USD", 0.001))
 
       @crawl_concurrency = 4
       @embedding_batch_size = 64

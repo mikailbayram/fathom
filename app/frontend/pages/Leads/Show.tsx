@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Link, router } from "@inertiajs/react"
 import { ArrowLeft, ArrowUpRight, Check, Copy, RotateCw } from "lucide-react"
 import AppLayout from "@/layouts/AppLayout"
@@ -9,10 +9,10 @@ import { EmptyState, ErrorState } from "@/components/States"
 import { Metric, MetricRow } from "@/components/Metric"
 import { StatusDot, leadState } from "@/components/StatusDot"
 import { DemoChat } from "@/components/DemoChat"
+import { subscribeToScan } from "@/lib/cable"
 import { cn } from "@/lib/utils"
 import type { FindingRow as Finding, ScanMetrics, PipelineStep, CompanyProfile, Handoff } from "@/types"
 
-const POLL_INTERVAL = 1500
 const TABS = [
   { id: "gaps", label: "Gaps" },
   { id: "demo", label: "Demo" },
@@ -41,6 +41,7 @@ interface LeadDetail {
   failed: boolean
   stalled?: boolean
   waiting_for_slot?: boolean
+  stage_label?: string | null
   scans_count: number
   findings_count: number
   claims_found: number
@@ -60,6 +61,8 @@ interface StatusPayload {
   running: boolean
   failed: boolean
   stalled?: boolean
+  waiting_for_slot?: boolean
+  stage_label?: string | null
   failed_stage?: string | null
   failed_stage_label?: string | null
   error_message?: string | null
@@ -83,7 +86,12 @@ export default function Show(props: { lead: LeadDetail; status: StatusPayload; t
 function LeadView({ lead, status, tab }: { lead: LeadDetail; status: StatusPayload; tab: TabId }) {
   const live = useLeadStatus(lead.id, status)
   const [active, setActive] = useState<TabId>(tab)
-  const complete = lead.status === "completed"
+  // Rendered from the live payload, falling back to the props it was seeded
+  // from. Reading these off the props alone is what froze the header: Inertia
+  // only re-sends them when the page reloads, which is at the very end.
+  const state = live.present ? live : lead
+  const complete = (live.present ? live.status : lead.status) === "completed"
+  const metrics = live.metrics ?? lead.metrics
 
   return (
     <div className="py-8">
@@ -108,7 +116,7 @@ function LeadView({ lead, status, tab }: { lead: LeadDetail; status: StatusPaylo
               {lead.domain}
               <ArrowUpRight className="size-3" />
             </a>
-            <StatusDot state={leadState(lead)} />
+            <StatusDot state={leadState(state)} label={live.stage_label ?? lead.stage_label} />
             {lead.profile?.product_category && (
               <span className="text-[0.75rem] text-muted-foreground">{lead.profile.product_category}</span>
             )}
@@ -150,11 +158,12 @@ function LeadView({ lead, status, tab }: { lead: LeadDetail; status: StatusPaylo
         <>
           <div className="mt-7 rounded-lg border border-border bg-surface px-5 py-4">
             <MetricRow>
-              <Metric value={lead.metrics.urls_discovered} label="URLs mapped" />
-              <Metric value={lead.metrics.pages_crawled} label="pages analyzed" />
-              <Metric value={lead.metrics.chunks} label="passages indexed" />
+              <Metric value={metrics.urls_discovered} label="URLs mapped" />
+              <Metric value={metrics.pages_crawled} label="pages analyzed" />
+              <Metric value={metrics.chunks} label="passages indexed" />
               <Metric value={lead.claims_found} label="facts published" />
-              <Metric value={lead.metrics.findings} label="gaps" />
+              <Metric value={metrics.findings} label="gaps" />
+              {metrics.cost && <Metric value={metrics.cost.label} label="cost to run" />}
             </MetricRow>
           </div>
 
@@ -535,33 +544,58 @@ function CopyLink({ path }: { path: string }) {
 }
 
 /** Polls while a scan runs, then reloads once for the completed props. */
+/**
+ * The scan's status, pushed over the socket.
+ *
+ * Nothing is polled. The scan broadcasts on every stage change and on every
+ * counter refresh -- which is once per page crawled and once per batch indexed
+ * -- so a timer asking "anything yet?" would only ever arrive after the answer
+ * had already been sent.
+ *
+ * The one fetch left is the resync on connect. Action Cable reconnects by
+ * itself after a drop, but it does not replay what it missed, so the state is
+ * read back once each time the socket comes up.
+ */
 function useLeadStatus(leadId: number, initial: StatusPayload) {
   const [status, setStatus] = useState(initial)
+  // Props arriving from a reload are newer than anything held here, and the
+  // seed is only read on mount, so they have to be taken explicitly.
+  useEffect(() => setStatus(initial), [initial])
+
+  const finished = useRef(false)
 
   useEffect(() => {
     if (!initial.running) return
 
+    finished.current = false
     let cancelled = false
-    const timer = setInterval(async () => {
+
+    // One reload when the scan ends, however the news arrives: the findings,
+    // the demo and the cost are props, and only a reload brings them.
+    const apply = (next: StatusPayload) => {
+      if (cancelled) return
+
+      setStatus(next)
+      if (next.running || finished.current) return
+
+      finished.current = true
+      router.reload()
+    }
+
+    const resync = async () => {
       try {
         const response = await fetch(`/leads/${leadId}/status`, { headers: { Accept: "application/json" } })
-        if (!response.ok || cancelled) return
-
-        const next: StatusPayload = await response.json()
-        setStatus(next)
-
-        if (!next.running) {
-          clearInterval(timer)
-          router.reload()
-        }
+        if (response.ok) apply(await response.json())
       } catch {
-        // A dropped poll is not worth showing; the next tick retries.
+        // The socket is up; the next broadcast carries the same thing.
       }
-    }, POLL_INTERVAL)
+    }
+
+    const subscription = subscribeToScan<StatusPayload>(leadId, { onEvent: apply, onConnected: resync })
 
     return () => {
       cancelled = true
-      clearInterval(timer)
+      subscription.unsubscribe()
     }
   }, [leadId, initial.running])
 

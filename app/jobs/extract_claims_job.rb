@@ -18,6 +18,7 @@ class ExtractClaimsJob < PipelineJob
         scan.claims.create(claim.to_attributes(scan))
       end
       scan.update!(claims_count: scan.claims.count, claims_extracted_at: Time.current)
+      scan.broadcast_status!
     end
 
     advance(scan)

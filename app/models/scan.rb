@@ -46,7 +46,7 @@ class Scan < ApplicationRecord
   delegate :domain, :website_url, to: :lead
 
   def self.start!(lead)
-    create!(lead: lead, status: :pending, mode: WebsiteIntelligence.mode.to_s)
+    create!(lead: lead, status: :pending, mode: WebsiteIntelligence.mode.to_s).tap(&:broadcast_status!)
   end
 
   def running? = !completed? && !failed?
@@ -74,8 +74,11 @@ class Scan < ApplicationRecord
       .where.not(status: stage.to_s)
       .update_all(status: stage.to_s, started_at: started_at || Time.current, updated_at: Time.current)
 
-    reload if claimed == 1
-    claimed == 1
+    return false unless claimed == 1
+
+    reload
+    broadcast_status!
+    true
   end
 
   def resume!
@@ -85,6 +88,7 @@ class Scan < ApplicationRecord
 
       update!(status: :pending, failed_at: nil, failed_stage: nil, error_message: nil)
       StartScanJob.perform_later(self)
+      broadcast_status!
       true
     end
   end
@@ -92,6 +96,7 @@ class Scan < ApplicationRecord
   def complete!
     update!(status: :completed, completed_at: Time.current, error_message: nil, failed_stage: nil, failed_at: nil)
     Admission.release!
+    broadcast_status!
   end
 
   # Failures name the stage they happened in so the UI never has to fall back
@@ -104,6 +109,7 @@ class Scan < ApplicationRecord
       error_message: error.is_a?(Exception) ? "#{error.class}: #{error.message}" : error.to_s
     )
     Admission.release!
+    broadcast_status!
   end
 
   def stage_index = STAGES.index(status) || (completed? ? STAGES.length : -1)
@@ -119,5 +125,19 @@ class Scan < ApplicationRecord
 
   def estimated_cost_usd
     ai_usages.sum(:estimated_cost) || 0
+  end
+
+  # Pushed after the transaction commits, never inside it: a stage claimed in a
+  # transaction that then rolls back is a stage that never happened, and a
+  # subscriber told otherwise has no way to find out.
+  #
+  # A socket nobody is listening on is not a reason to fail a scan, so a
+  # broadcast that raises is logged and swallowed.
+  def broadcast_status!
+    ActiveRecord.after_all_transactions_commit do
+      ScanChannel.broadcast_status(self)
+    rescue StandardError => error
+      Rails.logger.warn("ScanChannel broadcast failed for scan #{id}: #{error.class}: #{error.message}")
+    end
   end
 end

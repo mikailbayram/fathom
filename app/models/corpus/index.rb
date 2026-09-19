@@ -87,6 +87,7 @@ module Corpus
           chunks_count: scan.chunks.count,
           updated_at: Time.current
         )
+        scan.broadcast_status!
       end
   end
 end

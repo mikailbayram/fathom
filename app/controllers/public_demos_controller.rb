@@ -6,6 +6,11 @@
 class PublicDemosController < ApplicationController
   include VisitorSession
 
+  # The one surface outside the password. A demo link is meant to be sent to a
+  # prospect, who has no credentials and is never going to be given any. It
+  # still carries noindex, so a forwarded link does not become a public page.
+  skip_before_action :authenticate_operator
+
   # The widget script is public and stateless; it needs no visitor and belongs
   # to no conversation.
   skip_forgery_protection only: :widget

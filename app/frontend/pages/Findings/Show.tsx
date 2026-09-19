@@ -6,6 +6,7 @@ import { EvidenceExcerpt } from "@/components/EvidenceExcerpt"
 import { SourceLink } from "@/components/SourceLink"
 import { ScoreMark } from "@/components/ScoreMark"
 import { Findability } from "@/components/Findability"
+import { SearchEffort } from "@/components/SearchEffort"
 import { Eyebrow } from "@/components/Eyebrow"
 import type { FindingDetail } from "@/types"
 
@@ -27,7 +28,8 @@ export default function Show({ finding }: { finding: FindingDetail }) {
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2.5">
-            <Findability score={finding.discoverability_gap} />
+            <Findability score={finding.discoverability_gap} kind={finding.kind} domain={finding.lead.domain} />
+            <SearchEffort effort={finding.search_effort} />
             <Eyebrow mono>{finding.category_label}</Eyebrow>
           </div>
           <h1 className="mt-2.5 max-w-[46ch] text-[1.375rem] font-medium leading-snug tracking-tight text-foreground sm:text-[1.625rem]">
@@ -41,6 +43,11 @@ export default function Show({ finding }: { finding: FindingDetail }) {
               </>
             )}
             {finding.buyer_importance_label.toLowerCase()} buyer importance
+          </p>
+          <p className="mt-2 max-w-[62ch] text-[0.8125rem] leading-relaxed text-muted-foreground">
+            Estimated time a human would search for this:{" "}
+            <span className="text-foreground">{finding.search_effort.short}</span>
+            {" "}&mdash; {finding.search_effort.path}
           </p>
         </div>
       </header>

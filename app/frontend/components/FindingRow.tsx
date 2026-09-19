@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils"
 import { ScoreMark } from "@/components/ScoreMark"
 import { SourceLink } from "@/components/SourceLink"
 import { Findability } from "@/components/Findability"
+import { SearchEffort } from "@/components/SearchEffort"
 import type { FindingRow as Finding } from "@/types"
 
 /**
@@ -21,6 +22,7 @@ export function FindingRow({ finding, index }: { finding: Finding; index: number
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2.5">
             <Findability score={finding.discoverability_gap} kind={finding.kind} domain={finding.primary_source?.host ?? undefined} />
+            <SearchEffort effort={finding.search_effort} />
             <span className="label-mono uppercase text-muted-foreground">{finding.category_label}</span>
           </div>
 

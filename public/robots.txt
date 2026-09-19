@@ -1,1 +1,4 @@
-# See https://www.robotstxt.org/robotstxt.html for documentation on how to use the robots.txt file
+# Fathom is a private tool, and the demos it publishes are for one prospect at a
+# time. Nothing here belongs in a search index.
+User-agent: *
+Disallow: /

@@ -26,6 +26,12 @@ class FindingPresenter
       discoverability_gap: finding.discoverability_gap_points,
       source_type: finding.source_type,
       source_type_label: PageTypes.label(finding.source_type),
+      search_effort: {
+        band: finding.search_effort_band,
+        label: finding.search_effort_label,
+        short: SearchEffort.short_label(finding.search_effort_band),
+        path: finding.search_path.presence || SearchEffort.meaning(finding.search_effort_band)
+      },
       primary_source: source(finding.primary_source)
     }
   end

@@ -7,12 +7,22 @@ export interface PipelineStep {
   detail: string | null
 }
 
+/** What a scan cost to run: the AI calls plus the crawler, as one figure. */
+export interface ScanCost {
+  total: number
+  /** "$0.42", or "$0.42+" when a provider priced none of some calls. */
+  label: string
+  /** false when part of the total is unknown rather than zero. */
+  complete: boolean
+}
+
 export interface ScanMetrics {
   urls_discovered: number
   pages_crawled: number
   chunks: number
   claims: number
   findings: number
+  cost: ScanCost
 }
 
 export interface Source {
@@ -24,6 +34,16 @@ export interface Source {
   corpus_type: string
   corpus_label: string
   excerpt: string | null
+}
+
+/** How hard a buyer would have to work to reach an answer. A band, not a count of minutes. */
+export interface SearchEffort {
+  band: "signposted" | "short_hunt" | "long_hunt" | "dead_end"
+  label: string
+  /** The band without the trailing "to find", for tight spaces. */
+  short: string
+  /** One sentence: what that buyer would actually have to do. */
+  path: string
 }
 
 export interface FindingRow {
@@ -42,6 +62,7 @@ export interface FindingRow {
   discoverability_gap: number
   source_type: string
   source_type_label: string
+  search_effort: SearchEffort
   primary_source: Source | null
 }
 

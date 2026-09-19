@@ -20,6 +20,9 @@ class LeadPresenter
       failed: scan&.failed? || false,
       stalled: scan&.stalled? || false,
       waiting_for_slot: waiting_for_slot?,
+      # The stage, in the words the progress list uses. A row that says
+      # "Scanning" for eleven minutes is indistinguishable from a stuck one.
+      stage_label: stage_label,
       findings_count: scan&.findings_count.to_i,
       claims_count: scan&.claims_count.to_i,
       pages_crawled: scan&.pages_crawled.to_i,
@@ -53,6 +56,11 @@ class LeadPresenter
       running: scan.running?,
       failed: scan.failed?,
       stalled: scan.stalled?,
+      # Carried on the live payload as well as the row: the page renders its
+      # header from whichever arrived most recently, and a field missing from
+      # one of them reads as a state that changed.
+      waiting_for_slot: waiting_for_slot?,
+      stage_label: stage_label,
       failed_stage: scan.failed_stage,
       failed_stage_label: failed_stage_label,
       error_message: scan.error_message,
@@ -69,7 +77,7 @@ class LeadPresenter
     def findings
       return [] if scan.nil?
 
-      @findings ||= scan.findings.viable.ranked.includes(:claim, finding_sources: :chunk).to_a
+      @findings ||= scan.findings.viable.ranked.includes(:claim, :scan, finding_sources: { chunk: :page }).to_a
     end
 
     def metrics
@@ -80,8 +88,21 @@ class LeadPresenter
         pages_crawled: scan.pages_crawled,
         chunks: scan.chunks_count,
         claims: scan.claims_count,
-        findings: scan.findings_count
+        findings: scan.findings_count,
+        # What it cost to produce all of the above. One number: the breakdown
+        # between the models and the crawler is an operator's question, and the
+        # console answers it.
+        cost: ScanCost.new(scan).to_payload
       }
+    end
+
+    # Looked up in the labels the pipeline already publishes rather than built
+    # from a second copy of them.
+    def stage_label
+      return nil if scan.nil? || !scan.running?
+      return "Queued" if scan.pending?
+
+      Scan::Pipeline::LABELS.fetch(scan.status, scan.status.humanize)
     end
 
     def waiting_for_slot?
