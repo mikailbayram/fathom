@@ -32,7 +32,7 @@ export default function Show({
     <div
       className={
         embedded
-          ? "flex h-dvh flex-col px-4 pt-4"
+          ? "flex h-dvh flex-col overflow-hidden px-4 pt-4"
           : "mx-auto flex min-h-dvh max-w-2xl flex-col px-5 sm:px-6"
       }
     >

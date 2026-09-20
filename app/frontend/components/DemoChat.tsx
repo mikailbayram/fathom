@@ -159,7 +159,12 @@ export function DemoChat({
   const started = messages.length > 0
 
   return (
-    <div className="flex h-full flex-col">
+    // Compact means something above and below it owns part of the frame, so it
+    // takes the space that is left rather than asking for all of it. h-full
+    // here made the embedded panel demand the whole viewport on top of its
+    // header and footer, which overflowed the frame and put a second scrollbar
+    // beside the one the message list already has.
+    <div className={cn("flex flex-col", compact ? "min-h-0 flex-1" : "h-full")}>
       <div className={cn("flex-1", compact && "min-h-0 overflow-y-auto")}>
         {!started && suggestedQuestions.length > 0 && (
           <div className="space-y-2 pb-6">
