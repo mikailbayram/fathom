@@ -38,6 +38,13 @@ require "inertia_rails/minitest"
 ENV.delete("FATHOM_USERNAME")
 ENV.delete("FATHOM_PASSWORD")
 
+# Same trap, same fix. These are deleted rather than pinned to a value, so the
+# copies above the boot are undone by dotenv and the suite ends up testing
+# whichever provider and key the developer happens to have in .env.
+ENV.delete("AI_EMBEDDING_PROVIDER")
+ENV.delete("OPENAI_API_KEY")
+ENV.delete("OPENROUTER_API_KEY")
+
 module ActiveSupport
   class TestCase
     parallelize(workers: :number_of_processors)
