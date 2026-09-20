@@ -10,7 +10,9 @@ default: &default
       # still going. The thread count has to exceed the crawl ceiling.
       threads: <%= ENV.fetch("JOB_THREADS", 8) %>
       processes: <%= ENV.fetch("JOB_CONCURRENCY", 1) %>
-      polling_interval: 1
+      # A visitor's question waits here before anything starts. A second of
+      # dead time is worth more than the polling it saves at this volume.
+      polling_interval: 0.2
 
 development:
   <<: *default

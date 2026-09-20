@@ -91,7 +91,7 @@ class WebsiteIntelligenceTest < ActiveSupport::TestCase
     # run behind a scan, where spending reasoning tokens is the right trade.
     WebsiteIntelligence.reset_configuration!
 
-    assert_equal :medium, AI::Models.chat.effort
+    assert_equal :low, AI::Models.chat.effort
     assert_nil AI::Models.analysis.effort
     assert_nil AI::Models.fast.effort
     assert_nil AI::Models.embedding.effort

@@ -40,8 +40,13 @@ module WebsiteIntelligence
       # a few sentences either way, so the reasoning tokens are most of what
       # the visitor is waiting for rather than the answer itself.
       #
+      # Low rather than medium, measured rather than assumed: the same model
+      # doing a comparable structured job without reasoning (answer_buyer_visible)
+      # averages 2.9s against chat's 7.0s, and the reply is a few sentences
+      # either way. Raise it if answers start missing their citations.
+      #
       # Blank sends no effort at all and lets the provider pick its default.
-      @chat_effort = ENV.fetch("AI_CHAT_EFFORT", "medium").presence&.to_sym
+      @chat_effort = ENV.fetch("AI_CHAT_EFFORT", "low").presence&.to_sym
       @embedding_provider = ENV["AI_EMBEDDING_PROVIDER"].presence&.to_sym
       @embedding_dimensions = ENV["AI_EMBEDDING_DIMENSIONS"]&.to_i
     end

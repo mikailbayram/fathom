@@ -63,6 +63,9 @@ env:
     # and changing the embedding model invalidates them.
     AI_PROVIDER: openrouter
     AI_EMBEDDING_PROVIDER: openai
+    # Named here so production cannot drift from the default the way the
+    # budgets did. This is the one call a visitor waits on.
+    AI_CHAT_EFFORT: low
     # The budgets, named here because .env never leaves a developer's machine.
     # Left out, production silently runs the code defaults -- 5,000 pages a
     # scan -- and the first thing anyone notices is the crawler bill.
