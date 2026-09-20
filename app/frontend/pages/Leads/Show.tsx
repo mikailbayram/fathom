@@ -579,7 +579,6 @@ function CopyLink({ path }: { path: string }) {
   )
 }
 
-/** Polls while a scan runs, then reloads once for the completed props. */
 /**
  * The scan's status, pushed over the socket.
  *

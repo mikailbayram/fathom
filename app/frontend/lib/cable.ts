@@ -1,17 +1,28 @@
 import { createConsumer, type Subscription } from "@rails/actioncable"
 
 /**
- * One consumer per page. Action Cable reconnects on its own, so the only thing
- * worth owning here is the subscription's lifetime.
+ * One consumer per socket URL. Action Cable reconnects on its own, so the only
+ * thing worth owning here is the subscription's lifetime.
+ *
+ * Keyed by URL rather than shared outright, because the two callers do not want
+ * the same socket. A lead page subscribes to its scan with no token and shows a
+ * demo preview that has one, and a single memoised consumer would hand whichever
+ * mounted first to both -- making the preview's identity depend on render order
+ * and on an operator cookie that an embedded widget never has.
  */
-let consumer: ReturnType<typeof createConsumer> | null = null
+const consumers = new Map<string, ReturnType<typeof createConsumer>>()
 
 /**
  * The visitor token travels on the socket URL as well, because an embedded
  * widget is a third-party iframe and the browser sends no cookie with it.
  */
 function sharedConsumer(visitor?: string) {
-  consumer ||= createConsumer(visitor ? `/cable?v=${encodeURIComponent(visitor)}` : undefined)
+  const url = visitor ? `/cable?v=${encodeURIComponent(visitor)}` : "/cable"
+  const existing = consumers.get(url)
+  if (existing) return existing
+
+  const consumer = createConsumer(url)
+  consumers.set(url, consumer)
   return consumer
 }
 
