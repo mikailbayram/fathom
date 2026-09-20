@@ -61,6 +61,21 @@ class WidgetVisitorTest < ActionDispatch::IntegrationTest
     assert_equal "Do you support SSO?", opened.messages.order(:id).last.content
   end
 
+  test "a question survives having no session cookie, as a third-party iframe has none" do
+    # The authenticity token is derived from the session, and an embedded
+    # widget never gets one. Before this, every widget question was refused as
+    # a forgery before it reached the controller.
+    get public_demo_path(@chatbot.slug, v: @visitor)
+    reset!
+
+    post public_demo_messages_path(@chatbot.slug),
+         params: { question: "Do you support SSO?" },
+         headers: { VisitorSession::VISITOR_HEADER => @visitor }
+
+    assert_response :created
+    assert_equal @visitor, @chatbot.conversations.sole.session_id
+  end
+
   test "a handoff is identified the same way" do
     get public_demo_path(@chatbot.slug, v: @visitor)
 

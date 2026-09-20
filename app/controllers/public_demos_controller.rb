@@ -11,9 +11,20 @@ class PublicDemosController < ApplicationController
   # still carries noindex, so a forwarded link does not become a public page.
   skip_before_action :authenticate_operator
 
-  # The widget script is public and stateless; it needs no visitor and belongs
-  # to no conversation.
-  skip_forgery_protection only: :widget
+  # The whole controller is outside CSRF, not only the widget script.
+  #
+  # The authenticity token is derived from the session, and an embedded widget
+  # is a third-party iframe: the browser withholds the session cookie, so the
+  # token in the page can never validate and every question a widget asked came
+  # back 422 before it reached a single line of this controller.
+  #
+  # Nothing here was protected by it in the first place. CSRF defends ambient
+  # authority -- the cookie a browser attaches on a user's behalf -- and these
+  # actions have none. The visitor identifies itself with a token it passes
+  # explicitly, and every one of these endpoints is reachable by a plain HTTP
+  # call from anywhere, so a forged cross-site POST can do nothing a curl
+  # command could not. The one that costs money is rate limited instead.
+  skip_forgery_protection
 
   # The demo is meant to be framed on a prospect's own site, so it opts out of
   # Rails' default same-origin framing policy. It is a public page with no
