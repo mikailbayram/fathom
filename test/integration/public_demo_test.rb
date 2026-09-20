@@ -5,6 +5,12 @@ class PublicDemoTest < ActionDispatch::IntegrationTest
     @scan = acme_scan
     run_pipeline(@scan)
     @chatbot = @scan.chatbot
+
+    # A visitor always arrives before they ask. The page load is what hands out
+    # an identity; a question from nobody is refused, which is what keeps a
+    # client that forgot to identify itself from being answered in a
+    # conversation of its own.
+    get public_demo_path(@chatbot.slug)
   end
 
   test "a visitor reaches the demo without an account" do

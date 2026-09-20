@@ -12,7 +12,8 @@ module ApplicationCable
                       cookies.signed[Fathom::BasicAuth::OPERATOR_COOKIE].present?
 
       # Same reason the controller accepts one: an embedded widget is a
-      # third-party iframe and gets no cookie.
+      # third-party iframe and gets no cookie. A WebSocket handshake cannot
+      # carry a custom header, so here the token comes on the URL or not at all.
       from_param = request.params[VisitorSession::VISITOR_PARAM].to_s
       self.visitor_id = uuid?(from_param) ? from_param : cookies.signed[VisitorSession::VISITOR_COOKIE]
       reject_unauthorized_connection if visitor_id.blank?

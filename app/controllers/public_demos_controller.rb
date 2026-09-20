@@ -22,7 +22,13 @@ class PublicDemosController < ApplicationController
   # internal application.
   before_action :allow_embedding
   before_action :set_chatbot
-  before_action :set_conversation, except: :widget
+  # The page load may hand out an identity to someone who arrived without one.
+  # A write may not: a POST that cannot say who it is is a client that forgot to
+  # identify itself, and answering it in a conversation of its own is how that
+  # stays invisible -- which is exactly what the widget did with every question
+  # it was ever asked.
+  before_action :set_conversation, only: :show
+  before_action :require_conversation, only: %i[create handoff]
 
   rate_limit to: WebsiteIntelligence.config.public_demo_rate_limit,
              within: WebsiteIntelligence.config.public_demo_rate_period,
@@ -95,13 +101,27 @@ class PublicDemosController < ApplicationController
       @conversation = conversation_for(@chatbot)
     end
 
+    def require_conversation
+      @conversation = identified_conversation_for(@chatbot)
+      return if @conversation
+
+      render json: { error: "unidentified" }, status: :bad_request
+    end
+
     def demo_props
       {
         company: @chatbot.name,
         domain: @chatbot.domain,
         slug: @chatbot.slug,
-        ask_path: public_demo_messages_path(@chatbot.slug),
-        handoff_path: public_demo_handoffs_path(@chatbot.slug),
+        # The token travels on every request the demo makes, not only on the one
+        # that loaded it. An embedded widget is a third-party iframe: the
+        # browser sends no cookie with its POSTs, so without this the server
+        # mints a new visitor per message, answers a conversation nobody is
+        # subscribed to, and the reply never arrives. It is carried in both
+        # cases rather than only when embedded, because two paths behaving
+        # differently is what hid this.
+        ask_path: public_demo_messages_path(@chatbot.slug, v: @conversation.session_id),
+        handoff_path: public_demo_handoffs_path(@chatbot.slug, v: @conversation.session_id),
         suggested_questions: @chatbot.suggested_questions(limit: 4),
         messages: @conversation.messages.map(&:as_demo_payload),
         visitor: @conversation.session_id,

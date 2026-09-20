@@ -5,7 +5,7 @@ class LeadsController < ApplicationController
   # The Action Cable connection authenticates with this cookie and a rejected
   # subscription never retries, so it has to exist before either page renders --
   # not only before the first demo message.
-  before_action :visitor_id, only: %i[index show]
+  before_action :establish_visitor!, only: %i[index show]
 
   def index
     render inertia: "Leads/Index", props: {

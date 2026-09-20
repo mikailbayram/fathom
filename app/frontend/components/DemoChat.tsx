@@ -10,6 +10,24 @@ import type { ChatMessage as Message } from "@/types"
 const ANSWER_TIMEOUT_MS = 45_000
 
 /**
+ * Everything the demo sends, identified.
+ *
+ * The visitor travels on a header rather than being threaded onto each URL by
+ * the server: an embedded widget gets no cookie, and a request that cannot say
+ * who it is starts a conversation of its own. Defined once so a new endpoint
+ * cannot forget it -- which is exactly how the widget lost every answer it was
+ * ever sent.
+ */
+function demoHeaders(visitor?: string): HeadersInit {
+  return {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    "X-CSRF-Token": document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? "",
+    ...(visitor ? { "X-Fathom-Visitor": visitor } : {}),
+  }
+}
+
+/**
  * The conversation itself, shared by the public demo page and the preview
  * inside a lead. One implementation, so the preview is not a lookalike that can
  * drift from what a prospect actually sees.
@@ -87,11 +105,7 @@ export function DemoChat({
       try {
         const response = await fetch(askPath, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            "X-CSRF-Token": document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? "",
-          },
+          headers: demoHeaders(visitor),
           body: JSON.stringify({ question }),
         })
 
@@ -111,7 +125,7 @@ export function DemoChat({
         setError("That didn't send. Check your connection and try again.")
       }
     },
-    [askPath, pending, clearTimer],
+    [askPath, visitor, pending, clearTimer],
   )
 
   // Offered when the agent could not answer, and whenever someone asks for a
@@ -131,19 +145,15 @@ export function DemoChat({
     async (email: string) => {
       const response = await fetch(handoffPath, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          "X-CSRF-Token": document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? "",
-        },
-        body: JSON.stringify({ question: lastQuestion, email, v: visitor }),
+        headers: demoHeaders(visitor),
+        body: JSON.stringify({ question: lastQuestion, email }),
       })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
 
       const { message } = (await response.json()) as { message: Message }
       setMessages((current) => [...current, message])
     },
-    [handoffPath, lastQuestion],
+    [handoffPath, visitor, lastQuestion],
   )
 
   const started = messages.length > 0
