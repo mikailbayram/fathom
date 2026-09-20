@@ -47,6 +47,10 @@ class WidgetScript
         panel.src = ORIGIN + '/d/' + SLUG + '?embed=1&v=' + encodeURIComponent(visitor);
         panel.title = 'Ask anything about ' + NAME;
         panel.setAttribute('allow', 'clipboard-write');
+        // The panel is a fixed-height frame around a page that owns its own
+        // scrolling. Without this a browser may still put a scrollbar on the
+        // frame itself, beside the one the message list already has.
+        panel.setAttribute('scrolling', 'no');
         style(panel, {
           position: 'fixed', bottom: '88px', right: '20px', width: 'min(400px, calc(100vw - 40px))',
           height: 'min(600px, calc(100vh - 130px))', border: '1px solid rgba(0,0,0,.10)',

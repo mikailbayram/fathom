@@ -29,10 +29,28 @@ export default function Show({
   // Embedded, the page is a panel on someone else's site: it fills its frame
   // and drops the standalone page's generous margins.
   return (
+    <>
+      {/* Sized to the frame, not to the viewport.
+       *
+       * The shared layout puts min-h-dvh on the body, and a viewport unit
+       * inside an iframe is not reliably the frame's own height. When it
+       * resolves larger, the body stretches past the frame, the frame grows a
+       * scrollbar of its own beside the message list's, and the space below
+       * the footer goes blank. Anchoring to 100% of the frame removes the
+       * question, and the document is not allowed to scroll at all -- the
+       * message list is the only thing here that should.
+       *
+       * #app is in the chain because a percentage height resolves against the
+       * parent's, and Inertia's mount div has none: h-full on the page root
+       * fell back to content height and overflowed a short frame instead of
+       * fitting it. */}
+      {embedded && (
+        <style>{"html,body,#app{height:100%;min-height:0;overflow:hidden}"}</style>
+      )}
     <div
       className={
         embedded
-          ? "flex h-dvh flex-col overflow-hidden px-4 pt-4"
+          ? "flex h-full flex-col overflow-hidden px-4 pt-4"
           : "mx-auto flex min-h-dvh max-w-2xl flex-col px-5 sm:px-6"
       }
     >
@@ -70,5 +88,6 @@ export default function Show({
         An independent analysis of {company}&rsquo;s public content. Not affiliated with {company}.
       </p>
     </div>
+    </>
   )
 }
