@@ -66,6 +66,13 @@ env:
     # Named here so production cannot drift from the default the way the
     # budgets did. This is the one call a visitor waits on.
     AI_CHAT_EFFORT: low
+    # The model IDs for the same reason, and one more: the code defaults are
+    # bare OpenAI names, and this deployment routes through the aggregator,
+    # which namespaces them. Unnamed, production asks OpenRouter for model IDs
+    # OpenRouter does not publish.
+    AI_FAST_MODEL: openai/gpt-6-luna
+    AI_ANALYSIS_MODEL: openai/gpt-6-sol
+    AI_CHAT_MODEL: openai/gpt-6-luna
     # The budgets, named here because .env never leaves a developer's machine.
     # Left out, production silently runs the code defaults -- 5,000 pages a
     # scan -- and the first thing anyone notices is the crawler bill.
