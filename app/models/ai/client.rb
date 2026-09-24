@@ -29,8 +29,12 @@ module AI
       @conversation = conversation
     end
 
-    def structured(schema:, instructions:, prompt:)
-      parsed = complete(instructions: instructions, prompt: prompt, schema: schema).parsed
+    # tools are the RubyLLM::Tool instances the model may call before it
+    # answers; stream, when given, is fed every chunk as the reply arrives and
+    # must respond to #call and #reset.
+    def structured(schema:, instructions:, prompt:, tools: [], stream: nil)
+      parsed = complete(instructions: instructions, prompt: prompt, schema: schema,
+                        tools: tools, stream: stream).parsed
       raise ResponseError, "#{model.id} returned no structured output for #{operation}" if parsed.blank?
 
       parsed.deep_stringify_keys
@@ -43,22 +47,25 @@ module AI
     private
       attr_reader :model, :operation, :scan, :conversation
 
-      def complete(instructions:, prompt:, schema: nil)
+      def complete(instructions:, prompt:, schema: nil, tools: [], stream: nil)
         attempt = 0
 
         begin
           attempt += 1
-          request(instructions: instructions, prompt: prompt, schema: schema)
+          request(instructions: instructions, prompt: prompt, schema: schema, tools: tools, stream: stream)
         rescue RubyLLM::RateLimitError => error
           raise ResponseError, "#{model.id} is rate limited during #{operation}: #{error.message}" if
             attempt >= RATE_LIMIT_ATTEMPTS
 
           self.class.pause(RATE_LIMIT_BACKOFF[attempt - 1] || RATE_LIMIT_BACKOFF.last)
+          # The next attempt writes the answer again from the top, so whatever
+          # this one had begun to show is withdrawn rather than continued.
+          stream&.reset
           retry
         end
       end
 
-      def request(instructions:, prompt:, schema: nil)
+      def request(instructions:, prompt:, schema: nil, tools: [], stream: nil)
         ExternalRequests.guard!("#{operation} via #{model.id}")
         SpendingLimit.new(scan: scan).enforce!
 
@@ -75,9 +82,10 @@ module AI
         chat.with_provider_options(usage_accounting) if usage_accounting
         chat.with_instructions(instructions)
         chat.with_schema(schema) if schema
+        chat.with_tools(*tools) if tools.any?
 
-        message = chat.ask(prompt)
-        record(message, started)
+        message = stream ? chat.ask(prompt) { |chunk| stream.call(chunk) } : chat.ask(prompt)
+        record(chat, started)
         message
       # Ordered before the catch-all deliberately: RateLimitError is a
       # RubyLLM::Error, and wrapping it here would hide it from the retry above.
@@ -97,16 +105,22 @@ module AI
         { usage: { include: true } } if model.provider.to_sym == :openrouter
       end
 
-      def record(message, started)
+      # Read from the chat rather than from the reply it returned, because a
+      # call that used a tool made more than one request and the reply carries
+      # only the last of them -- for the chatbot, roughly half of what the
+      # question actually cost. Chat aggregates every request it made, and
+      # reports no total at all when any of them came back unpriced, which is
+      # what keeps unknown from being recorded as zero.
+      def record(chat, started)
         AIUsage.record(
           operation: operation,
           provider: model.provider,
           model: model.id,
           scan: scan,
           conversation: conversation,
-          input_tokens: message.tokens&.input,
-          output_tokens: message.tokens&.output,
-          estimated_cost: message.cost&.total,
+          input_tokens: chat.tokens&.input,
+          output_tokens: chat.tokens&.output,
+          estimated_cost: chat.cost&.total,
           duration_ms: ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1_000).round
         )
       end

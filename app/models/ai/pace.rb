@@ -21,10 +21,22 @@ module AI
   # double. Moving the timestamp into a row claimed with an advisory lock is the
   # fix, and is worth doing the day a second worker exists, not before.
   module Pace
-    # Requests per minute, by model role. Embeddings are excluded on purpose:
-    # they are a different model on a different account and have never been the
-    # constraint, and pacing them would slow every retrieval for nothing.
+    # Requests per minute, by model role.
     DEFAULT_LIMIT = 20
+
+    # The roles that are never spaced, for two different reasons.
+    #
+    # Embeddings are a different model on a different account and have never
+    # been the constraint; pacing them would slow every retrieval for nothing.
+    #
+    # Chat is excluded because of how the spacing works rather than because it
+    # is cheap. wait_for reserves the next free slot, so a question asked while
+    # a scan already holds fifty reservations would wait fifty intervals --
+    # two and a half minutes -- before it was even sent. The one call a person
+    # is sitting in front of cannot queue behind batch work. A visitor's
+    # question is rate limited at the endpoint instead, and a refusal from the
+    # provider is retried by Client.
+    UNPACED_ROLES = %i[embedding chat].freeze
 
     @mutex = Mutex.new
     @next_allowed = {}
@@ -54,7 +66,7 @@ module AI
       end
 
       def interval_for(model)
-        return 0.0 if model.role == :embedding
+        return 0.0 if UNPACED_ROLES.include?(model.role)
 
         limit = requests_per_minute
         limit.positive? ? 60.0 / limit : 0.0

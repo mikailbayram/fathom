@@ -31,14 +31,38 @@ module AI
       def reply(message, &on_text)
         tool = CorpusSearchTool.new(chatbot.scan)
 
-        chat = RubyLLM.chat(model: model.id, provider: model.provider, assume_model_exists: true)
-        chat.with_thinking(effort: model.effort) if model.effort
-        chat.with_instructions(instructions)
-        chat.with_tools(tool)
-        chat.with_schema(REPLY_SCHEMA)
+        build_reply(ask(tool, message, &on_text), tool, message)
+      end
 
-        response = ask(chat, message, &on_text)
-        build_reply(response, tool, message)
+      # Forwards the reply to the visitor as the model writes it.
+      #
+      # Only the prose is forwarded, never the source ids beside it: those are
+      # checked against what the search actually returned before anything is
+      # cited, and a citation cannot be shown before it has been verified.
+      class Stream
+        def initialize(on_text)
+          @on_text = on_text
+          @partial = ReplyStream.new
+        end
+
+        def call(chunk)
+          text = @partial << chunk.content
+          @on_text.call(text) if text
+
+          # A round that ends in a tool call is a reply the model abandoned to
+          # go and search. What follows is written from the top, not continued.
+          withdraw if chunk.finish_reason == :tool_calls
+        end
+
+        # Client calls this before it retries a refused request, which is the
+        # same situation: the answer is about to be written again from nothing.
+        def reset = withdraw
+
+        private
+          def withdraw
+            @on_text.call("") if @partial.text.present?
+            @partial.reset
+          end
       end
 
       private
@@ -69,50 +93,15 @@ module AI
           )
         end
 
-        def ask(chat, message, &on_text)
-          started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
-          ExternalRequests.guard!("chat_answer via #{model.id}")
-          SpendingLimit.new(scan: chatbot.scan).enforce!
-
-          result = chat.ask(prompt_for(message), &stream(on_text))
-
-          AIUsage.record(
-            operation: "chat_answer", provider: model.provider, model: model.id,
-            scan: chatbot.scan, conversation: conversation,
-            input_tokens: result.tokens&.input, output_tokens: result.tokens&.output,
-            estimated_cost: result.cost&.total,
-            duration_ms: ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started) * 1_000).round
-          )
-
-          (result.parsed || {}).deep_stringify_keys
-        rescue RubyLLM::Error => error
-          raise Client::ResponseError, "#{model.id} failed during chat_answer: #{error.message}"
-        end
-
-        # Forwards the reply to the visitor as the model writes it.
-        #
-        # Only the prose is forwarded, never the source ids beside it: those are
-        # checked against what the search actually returned before anything is
-        # cited, and a citation cannot be shown before it has been verified.
-        #
-        # A round that ends in a tool call is a reply the model abandoned to go
-        # and search. Whatever it had begun to write is withdrawn by sending an
-        # empty reply, because the answer that follows the search is written
-        # from the top rather than continued.
-        def stream(on_text)
-          return nil if on_text.nil?
-
-          partial = ReplyStream.new
-
-          lambda do |chunk|
-            text = partial << chunk.content
-            on_text.call(text) if text
-
-            next unless chunk.finish_reason == :tool_calls
-
-            on_text.call("") if partial.text.present?
-            partial.reset
-          end
+        # Through Client like every other call, which is what puts the visitor's
+        # question behind the same spending limit, the same retry on a refusal,
+        # and -- the one that was actually missing -- the provider options that
+        # make an aggregator report what it charged. Answering a question was
+        # the only paid call in the application billed to nobody.
+        def ask(tool, message, &on_text)
+          Client.new(model: model, operation: "chat_answer", scan: chatbot.scan, conversation: conversation)
+                .structured(schema: REPLY_SCHEMA, instructions: instructions, prompt: prompt_for(message),
+                            tools: [ tool ], stream: (Stream.new(on_text) if on_text))
         end
 
         def instructions

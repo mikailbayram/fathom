@@ -21,6 +21,16 @@ class AI::PaceTest < ActiveSupport::TestCase
     end
   end
 
+  test "does not pace the one call a visitor is waiting on" do
+    # wait_for reserves the next free slot rather than measuring from the last
+    # call, so a question asked while a scan holds fifty reservations would wait
+    # fifty intervals before being sent at all. Batch work may queue; a person
+    # sitting in front of a chat window may not.
+    with_env("AI_REQUESTS_PER_MINUTE" => "20") do
+      assert_equal 0.0, AI::Pace.interval_for(AI::Models.chat)
+    end
+  end
+
   test "pacing can be switched off" do
     with_env("AI_REQUESTS_PER_MINUTE" => "0") do
       assert_equal 0.0, AI::Pace.interval_for(AI::Models.analysis)
