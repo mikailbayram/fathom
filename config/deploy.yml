@@ -73,6 +73,20 @@ env:
     AI_FAST_MODEL: openai/gpt-6-luna
     AI_ANALYSIS_MODEL: openai/gpt-6-sol
     AI_CHAT_MODEL: openai/gpt-6-luna
+    # Pacing, named for the same reason and set from what the key reports rather
+    # than from the code default. That default is 20 a minute, which is what a
+    # free OpenRouter key allows; this key is funded, and OpenRouter meters a
+    # funded key by credits -- its per-key rate limit reads -1 and declares
+    # itself deprecated. Twenty a minute was therefore spacing calls three
+    # seconds apart to respect a ceiling that is not there, and a scan makes a
+    # couple of hundred of them: ten minutes of a salesperson watching a
+    # progress bar, spent waiting on nothing.
+    #
+    # Not zero. AI_CALL_CONCURRENCY already holds six calls in flight at about
+    # two and a half seconds each, so roughly 140 a minute is the real ceiling
+    # and this sits just under it -- close enough to cost nothing, low enough to
+    # still catch a stage that fans out further than anyone intended.
+    AI_REQUESTS_PER_MINUTE: 120
     # The budgets, named here because .env never leaves a developer's machine.
     # Left out, production silently runs the code defaults -- 5,000 pages a
     # scan -- and the first thing anyone notices is the crawler bill.

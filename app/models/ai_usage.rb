@@ -3,13 +3,20 @@
 # Token counts and costs come from the provider's own usage metadata. When a
 # provider reports nothing, the columns stay null: unknown is not zero.
 class AIUsage < ApplicationRecord
+  # Every operation that reaches a provider. Validated rather than merely
+  # listed: nothing referred to this, so it quietly fell out of date -- it was
+  # missing claim_extraction and coverage_checklist, and still named a
+  # question_generation stage that no longer exists. A list of what the
+  # application does that nobody checks is worse than no list, because it reads
+  # like one that is true.
   OPERATIONS = %w[
-    company_analysis
-    question_generation
-    embedding
-    answer_full
     answer_buyer_visible
+    answer_full
     chat_answer
+    claim_extraction
+    company_analysis
+    coverage_checklist
+    embedding
     page_classification
   ].freeze
 
@@ -17,6 +24,7 @@ class AIUsage < ApplicationRecord
   belongs_to :conversation, optional: true
 
   validates :operation, :provider, :model, presence: true
+  validates :operation, inclusion: { in: OPERATIONS }
 
   scope :today, -> { where(created_at: Time.current.all_day) }
 

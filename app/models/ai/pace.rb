@@ -5,11 +5,17 @@ module AI
   #
   #   AI::Pace.wait_for(model)   # returns once it is this call's turn
   #
-  # Providers meter requests per minute per model, and that is not a ceiling
-  # concurrency can respect: OpenRouter allows a new account 20 requests a
-  # minute, while an analysis call takes about two and a half seconds, so even
-  # one strictly sequential stream runs at twenty-four a minute. There is no
-  # concurrency setting low enough. Only spacing the calls works.
+  # A per-minute ceiling is not something concurrency can respect: an analysis
+  # call takes about two and a half seconds, so even one strictly sequential
+  # stream runs at twenty-four a minute. There is no concurrency setting low
+  # enough. Only spacing the calls works.
+  #
+  # What that ceiling is depends on the account, and is not always a provider's
+  # to impose. OpenRouter meters a free key by requests and a paid one by
+  # credits -- its per-key rate_limit field reports -1 and calls itself
+  # deprecated -- so on a funded key AI_REQUESTS_PER_MINUTE is a guard this
+  # application chooses rather than a wall it was told about. Set it from what
+  # the key actually reports, not from this comment.
   #
   # Retrying a rejected call is still necessary -- see Client's backoff -- but a
   # retry is what happens when this failed. Waiting three seconds beats being
@@ -21,9 +27,6 @@ module AI
   # double. Moving the timestamp into a row claimed with an advisory lock is the
   # fix, and is worth doing the day a second worker exists, not before.
   module Pace
-    # Requests per minute, by model role.
-    DEFAULT_LIMIT = 20
-
     # The roles that are never spaced, for two different reasons.
     #
     # Embeddings are a different model on a different account and have never

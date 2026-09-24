@@ -8,9 +8,9 @@ module AI
     class ResponseError < StandardError; end
 
     # A rate limit is a queueing problem, not a failure. Stages fan out several
-    # calls at once and providers meter per minute, so the first thing a new
-    # account meets is a 429 -- OpenRouter starts at 20 requests per minute per
-    # model. Failing the scan there would throw away every passage already read.
+    # calls at once and a metered account answers the burst with a 429, which is
+    # the first thing a new key tends to meet. Failing the scan there would
+    # throw away every passage already read.
     #
     # Waits are long because the window being waited out is a minute: a burst of
     # six concurrent calls needs the limit to actually roll over, not a quick
