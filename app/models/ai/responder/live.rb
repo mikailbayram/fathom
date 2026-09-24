@@ -93,11 +93,14 @@ module AI
           )
         end
 
-        # Through Client like every other call, which is what puts the visitor's
-        # question behind the same spending limit, the same retry on a refusal,
-        # and -- the one that was actually missing -- the provider options that
-        # make an aggregator report what it charged. Answering a question was
-        # the only paid call in the application billed to nobody.
+        # Through Client like every other call, rather than building its own
+        # chat. What that was costing was narrower than it first looked: the
+        # aggregator reported its price whether or not it was asked to, so the
+        # answers were billed correctly. What was wrong is that usage came from
+        # the reply, and a question the model searched before answering took two
+        # requests -- so roughly half of what it cost went unrecorded. Client
+        # reads the whole chat, and one call path is what stops the next thing
+        # added here from being missed the same way.
         def ask(tool, message, &on_text)
           Client.new(model: model, operation: "chat_answer", scan: chatbot.scan, conversation: conversation)
                 .structured(schema: REPLY_SCHEMA, instructions: instructions, prompt: prompt_for(message),

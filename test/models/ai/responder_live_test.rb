@@ -1,9 +1,15 @@
 require "test_helper"
 
 # The chatbot answering a question is the only paid call a person sits and
-# waits on, and it used to be the only one that did not go through Client --
-# so it was billed by the aggregator and recorded at no cost, which is how a
-# budget stops applying without anyone noticing.
+# waits on, and it used to be the only one that did not go through Client.
+#
+# These pin the two halves of that down. The provider options are asserted
+# because nothing should depend on an aggregator volunteering its price -- it
+# did volunteer it, so this was never the outage it looked like, but a ledger
+# that works only while a third party keeps being generous is not a ledger.
+# The usage assertions are the part that was genuinely wrong: a reply carries
+# only the last request that produced it, and a question the model searched
+# first took two.
 class AI::ResponderLiveTest < ActiveSupport::TestCase
   LIVE = { "APP_MODE" => "live", "ENABLE_LIVE_AI" => "true" }.freeze
   ROUTED = AI::Models::Model.new(role: :chat, id: "openai/gpt-6-luna", provider: :openrouter, effort: :low)
@@ -81,10 +87,11 @@ class AI::ResponderLiveTest < ActiveSupport::TestCase
     assert_equal @conversation, usage.conversation
   end
 
-  # Unpriced calls are counted against the scan, and past SpendingLimit's
-  # tolerance of five the budget can no longer be enforced -- so every later
-  # question is refused before it is sent. A demo that answered five questions
-  # and then broke for good is what this costs when it is wrong.
+  # Were a provider to stop reporting its price, unpriced calls would count
+  # against the scan, and past SpendingLimit's tolerance of five the budget
+  # could no longer be enforced -- every later question refused before it was
+  # sent. Asked for explicitly, that does not come down to the provider's
+  # choice.
   test "asks the aggregator for the price, so the answer is not recorded as free" do
     options = []
 
