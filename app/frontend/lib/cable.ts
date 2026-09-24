@@ -28,6 +28,13 @@ function sharedConsumer(visitor?: string) {
 
 export type ConversationEvent =
   | { type: "thinking" }
+  /**
+   * The reply as it is being written. `text` is the whole answer so far rather
+   * than the latest piece, so a client keeps the highest `seq` it has seen and
+   * discards anything older -- including after a rewrite, which arrives as a
+   * shorter text under a higher sequence.
+   */
+  | { type: "answer"; id: string; seq: number; text: string }
   | { type: "message"; message: unknown }
 
 export function subscribeToConversation(

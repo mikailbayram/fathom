@@ -37,7 +37,12 @@ module AI
 
     # The deterministic path. Live overrides this wholesale and lets the model
     # decide; this exists so fake mode behaves predictably without one.
-    def reply(message)
+    #
+    # A given block is called with the whole reply so far, as often as there is
+    # more of it, so the visitor can read an answer while it is still being
+    # written. The canned replies below pass nothing to it: they are one
+    # sentence that already exists, and there is nothing to watch arrive.
+    def reply(message, &on_text)
       case Intent.of(message)
       when :empty then meta_reply
       when :greeting then greeting_reply
@@ -45,11 +50,11 @@ module AI
       when :overview then overview_reply
       when :human then human_reply
       when :smalltalk then smalltalk_reply
-      else answer(message)
+      else answer(message, &on_text)
       end
     end
 
-    def answer(_question) = raise NotImplementedError
+    def answer(_question, &) = raise NotImplementedError
 
     private
       attr_reader :chatbot, :conversation, :model, :search

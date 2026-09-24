@@ -22,4 +22,11 @@ class ConversationChannel < ApplicationCable::Channel
   def self.broadcast_thinking(conversation)
     broadcast_to(conversation, type: "thinking")
   end
+
+  # The reply as it is being written. It carries the whole text each time rather
+  # than the latest piece of it, so a client can take the highest sequence it
+  # has seen and ignore the rest. See AnswerStream.
+  def self.broadcast_answer(conversation, id:, seq:, text:)
+    broadcast_to(conversation, type: "answer", id: id, seq: seq, text: text)
+  end
 end

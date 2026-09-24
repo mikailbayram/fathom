@@ -5,8 +5,11 @@ import { FormattedMessage } from "@/components/FormattedMessage"
 import { cn } from "@/lib/utils"
 import type { ChatMessage as Message } from "@/types"
 
-// If the answer has not arrived by now, something is wrong upstream and saying
-// so beats an indicator that spins forever.
+// How long the answer may go quiet for. The countdown is restarted every time
+// more of it arrives, so it measures silence rather than length: an answer that
+// is visibly being written is not a failure however long it runs. When nothing
+// has come this whole time, something is wrong upstream, and saying so beats an
+// indicator that spins forever.
 const ANSWER_TIMEOUT_MS = 45_000
 
 /**
@@ -52,26 +55,67 @@ export function DemoChat({
   compact?: boolean
 }) {
   const [messages, setMessages] = useState<Message[]>(initialMessages)
+  // The answer being written, if one is. Held apart from `messages` because it
+  // is not one yet: it has no id, no sources, and no promise that it will be
+  // what gets stored -- a reply that cites nothing the search returned is
+  // replaced by the server before it becomes a record.
+  const [streaming, setStreaming] = useState<{ id: string; seq: number; text: string } | null>(null)
+  // The one message that arrived as text before it arrived as a record, so it
+  // can take its place without playing itself in a second time.
+  const [settled, setSettled] = useState<number | null>(null)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [draft, setDraft] = useState("")
   const endRef = useRef<HTMLDivElement>(null)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Read inside the subscription, which must not be torn down and rebuilt every
+  // time another word of the answer arrives.
+  const streamingRef = useRef(false)
 
   const clearTimer = useCallback(() => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     timeoutRef.current = null
   }, [])
 
+  // Starts the wait over. A half-written answer is dropped along with the
+  // spinner when it expires: text with no sources behind it is not something to
+  // leave on screen beside an apology.
+  const waitForAnswer = useCallback(() => {
+    clearTimer()
+    timeoutRef.current = setTimeout(() => {
+      setPending(false)
+      setStreaming(null)
+      setError("That's taking longer than it should. The answer may still arrive, or try asking again.")
+    }, ANSWER_TIMEOUT_MS)
+  }, [clearTimer])
+
   useEffect(() => {
     const subscription = subscribeToConversation(slug, visitor, {
       onEvent: (event: ConversationEvent) => {
+        // Each of these carries the whole answer so far, so the newest sequence
+        // wins outright and an older one is simply dropped. The server rewrites
+        // by sending a shorter text under a higher sequence, which is how an
+        // answer the model abandoned mid-sentence to go and search disappears.
+        if (event.type === "answer") {
+          setStreaming((current) =>
+            current?.id === event.id && current.seq >= event.seq
+              ? current
+              : { id: event.id, seq: event.seq, text: event.text },
+          )
+          streamingRef.current = true
+          waitForAnswer()
+          return
+        }
+
         if (event.type !== "message") return
 
         const message = event.message as Message
         setMessages((current) => (current.some((m) => m.id === message.id) ? current : [...current, message]))
         if (message.role === "assistant") {
           clearTimer()
+          if (streamingRef.current) setSettled(message.id)
+          streamingRef.current = false
+          setStreaming(null)
           setPending(false)
         }
       },
@@ -81,11 +125,16 @@ export function DemoChat({
       subscription.unsubscribe()
       clearTimer()
     }
-  }, [slug, visitor, clearTimer])
+  }, [slug, visitor, clearTimer, waitForAnswer])
+
+  const streamed = streaming?.text ?? ""
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" })
-  }, [messages.length, pending])
+    // Abruptly while the answer is being written. Smooth scrolling restarted
+    // several times a second never finishes one animation before beginning the
+    // next, and the list crawls behind the text instead of following it.
+    endRef.current?.scrollIntoView({ behavior: streamed ? "auto" : "smooth", block: "end" })
+  }, [messages.length, pending, streamed])
 
   const ask = useCallback(
     async (asked: string) => {
@@ -95,12 +144,9 @@ export function DemoChat({
       setDraft("")
       setPending(true)
       setError(null)
-
-      clearTimer()
-      timeoutRef.current = setTimeout(() => {
-        setPending(false)
-        setError("That's taking longer than it should. The answer may still arrive, or try asking again.")
-      }, ANSWER_TIMEOUT_MS)
+      setStreaming(null)
+      streamingRef.current = false
+      waitForAnswer()
 
       try {
         const response = await fetch(askPath, {
@@ -125,7 +171,7 @@ export function DemoChat({
         setError("That didn't send. Check your connection and try again.")
       }
     },
-    [askPath, visitor, pending, clearTimer],
+    [askPath, visitor, pending, clearTimer, waitForAnswer],
   )
 
   // Offered when the agent could not answer, and whenever someone asks for a
@@ -185,9 +231,17 @@ export function DemoChat({
         {started && (
           <div className="space-y-4 pb-6">
             {messages.map((message) => (
-              <Bubble key={message.id} message={message} />
+              <Bubble key={message.id} message={message} settled={message.id === settled} />
             ))}
-            {pending && <Typing />}
+            {pending && !streamed && <Typing />}
+            {streamed && (
+              <>
+                <span role="status" className="sr-only">
+                  Writing an answer
+                </span>
+                <Streaming text={streamed} />
+              </>
+            )}
             {canEscalate && <AskAPerson company={company} question={lastQuestion} onSubmit={escalate} />}
             <div ref={endRef} />
           </div>
@@ -235,11 +289,17 @@ export function DemoChat({
 }
 
 /**
+ * Every reply from the assistant sits in this, streamed or stored, so nothing
+ * shifts when the record arrives and replaces the text on screen.
+ */
+const ANSWER_BUBBLE = "max-w-[92%] rounded-2xl rounded-bl-md border border-border bg-surface px-3.5 py-2.5"
+
+/**
  * The visitor's turn sits right in a filled bubble; the answer sits left, on the
  * surface, with its sources attached. Sources stay visible rather than folded
  * away: they are the reason to believe the answer.
  */
-function Bubble({ message }: { message: Message }) {
+function Bubble({ message, settled = false }: { message: Message; settled?: boolean }) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end animate-in fade-in slide-in-from-bottom-1 duration-200">
@@ -251,13 +311,16 @@ function Bubble({ message }: { message: Message }) {
   }
 
   return (
-    <div className="flex justify-start animate-in fade-in slide-in-from-bottom-1 duration-300">
+    // An answer the visitor already watched being written does not play in
+    // again. Without this the finished reply fades out and back over the same
+    // words, which reads as a glitch rather than as its sources arriving.
+    <div className={cn("flex justify-start", !settled && "animate-in fade-in slide-in-from-bottom-1 duration-300")}>
       <div
         className={cn(
           // Every reply from the assistant reads the same. The dashed grey
           // variant made an honest "I don't have that" look like a degraded
           // answer rather than simply an answer.
-          "max-w-[92%] rounded-2xl rounded-bl-md border border-border bg-surface px-3.5 py-2.5",
+          ANSWER_BUBBLE,
           // A human's reply is a different speaker, so it keeps its own mark.
           message.kind === "human" && "border-brand/30 bg-brand/5",
         )}
@@ -356,6 +419,28 @@ function AskAPerson({
         </p>
       )}
     </form>
+  )
+}
+
+/**
+ * The answer while the model is still writing it.
+ *
+ * No sources hang below it, because the citations are checked against what the
+ * search actually returned before any of them is shown, and that check can only
+ * run on a finished reply. Text first, attribution when it has been verified.
+ *
+ * Hidden from assistive technology: this is the same answer the stored message
+ * is about to carry, and announcing it several times a second as it grows would
+ * bury the finished one. The status beside it says an answer is coming, and the
+ * message that lands is what gets read out.
+ */
+function Streaming({ text }: { text: string }) {
+  return (
+    <div className="flex justify-start" aria-hidden="true">
+      <div className={ANSWER_BUBBLE}>
+        <FormattedMessage content={text} />
+      </div>
+    </div>
   )
 }
 

@@ -28,7 +28,7 @@ module AI
         }
       }.freeze
 
-      def reply(message)
+      def reply(message, &on_text)
         tool = CorpusSearchTool.new(chatbot.scan)
 
         chat = RubyLLM.chat(model: model.id, provider: model.provider, assume_model_exists: true)
@@ -37,7 +37,7 @@ module AI
         chat.with_tools(tool)
         chat.with_schema(REPLY_SCHEMA)
 
-        response = ask(chat, message)
+        response = ask(chat, message, &on_text)
         build_reply(response, tool, message)
       end
 
@@ -69,12 +69,12 @@ module AI
           )
         end
 
-        def ask(chat, message)
+        def ask(chat, message, &on_text)
           started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
           ExternalRequests.guard!("chat_answer via #{model.id}")
           SpendingLimit.new(scan: chatbot.scan).enforce!
 
-          result = chat.ask(prompt_for(message))
+          result = chat.ask(prompt_for(message), &stream(on_text))
 
           AIUsage.record(
             operation: "chat_answer", provider: model.provider, model: model.id,
@@ -87,6 +87,32 @@ module AI
           (result.parsed || {}).deep_stringify_keys
         rescue RubyLLM::Error => error
           raise Client::ResponseError, "#{model.id} failed during chat_answer: #{error.message}"
+        end
+
+        # Forwards the reply to the visitor as the model writes it.
+        #
+        # Only the prose is forwarded, never the source ids beside it: those are
+        # checked against what the search actually returned before anything is
+        # cited, and a citation cannot be shown before it has been verified.
+        #
+        # A round that ends in a tool call is a reply the model abandoned to go
+        # and search. Whatever it had begun to write is withdrawn by sending an
+        # empty reply, because the answer that follows the search is written
+        # from the top rather than continued.
+        def stream(on_text)
+          return nil if on_text.nil?
+
+          partial = ReplyStream.new
+
+          lambda do |chunk|
+            text = partial << chunk.content
+            on_text.call(text) if text
+
+            next unless chunk.finish_reason == :tool_calls
+
+            on_text.call("") if partial.text.present?
+            partial.reset
+          end
         end
 
         def instructions

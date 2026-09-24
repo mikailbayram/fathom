@@ -54,6 +54,41 @@ class PublicDemoTest < ActionDispatch::IntegrationTest
     assert_broadcasts_on_channel(conversation) { perform_enqueued_jobs }
   end
 
+  test "sends the answer as it is written, before the record it will become" do
+    post public_demo_messages_path(@chatbot.slug),
+         params: { question: "Can administrators define custom RBAC roles in Acme?" }
+    conversation = @chatbot.conversations.first
+    perform_enqueued_jobs
+
+    events = broadcasts_for(conversation).map { |payload| JSON.parse(payload) }
+    written = events.select { |event| event["type"] == "answer" }
+    answer = conversation.messages.where(role: "assistant").last
+
+    assert_predicate written, :any?, "expected the reply to be sent while it was written"
+    assert_operator events.index { |event| event["type"] == "answer" },
+                    :<,
+                    events.index { |event| event["type"] == "message" },
+                    "expected the text to arrive before the record"
+
+    # What was streamed is the beginning of what was stored. It is only ever the
+    # beginning: the sources are not sent with it, because they are checked
+    # against the search before any of them is shown.
+    assert answer.content.start_with?(written.last["text"])
+    assert_predicate answer.sources, :any?
+  end
+
+  # A canned reply is one sentence that already exists. There is nothing to
+  # watch arrive, and a client that showed it twice over would flicker.
+  test "does not stream a reply that was never written by a model" do
+    post public_demo_messages_path(@chatbot.slug), params: { question: "hello" }
+    conversation = @chatbot.conversations.first
+    perform_enqueued_jobs
+
+    events = broadcasts_for(conversation).map { |payload| JSON.parse(payload) }
+
+    assert_equal [ "message" ], events.map { |event| event["type"] }.uniq
+  end
+
   test "says plainly when a fact is not published, and offers the nearest thing" do
     post public_demo_messages_path(@chatbot.slug), params: { question: "Does Acme hold FedRAMP authorization?" }
     perform_enqueued_jobs
