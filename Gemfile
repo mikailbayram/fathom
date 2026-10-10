@@ -5,7 +5,7 @@ gem "rails", "~> 8.1.3", ">= 8.1.3.1"
 # The modern asset pipeline for Rails [https://github.com/rails/propshaft]
 gem "propshaft"
 # Use PostgreSQL (with pgvector) as the database for Active Record
-gem "pg", "~> 1.6"
+gem "pg", "~> 1.7"
 # pgvector support for Active Record [https://github.com/ankane/neighbor]
 gem "neighbor", "~> 1.2"
 # Use the Puma web server [https://github.com/puma/puma]
