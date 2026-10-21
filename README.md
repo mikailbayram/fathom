@@ -114,7 +114,7 @@ mapping → classifying → planning → crawling → processing → embedding �
 | --- | --- | --- | --- |
 | `fake` (default) | fixtures on disk | deterministic adapters | $0 |
 | `local` | self-hosted Firecrawl | local models | $0 |
-| `live` | Firecrawl API | OpenAI via RubyLLM | metered |
+| `live` | Firecrawl API | OpenAI, or any RubyLLM provider | metered |
 
 **Fake mode never falls back to live mode.** Every outbound request passes
 `ExternalRequests.guard!`, which raises in fake mode. An `OPENAI_API_KEY` sitting in your
@@ -140,7 +140,7 @@ works and the same input always produces the same vector.
 ### Setup
 
 ```bash
-git clone <repo> && cd fathom
+git clone https://github.com/mikailbayram/fathom.git && cd fathom
 
 cp .env.example .env         # defaults are fake mode; no credentials needed
 docker compose up -d         # PostgreSQL 17 + pgvector on localhost:5433
@@ -228,7 +228,7 @@ network.
 bin/rails test
 ```
 
-257 tests, zero external calls. The suite installs a socket guard that raises on any
+Zero external calls. The suite installs a socket guard that raises on any
 outbound connection, so "CI never spends money" is enforced rather than hoped for. The
 end-to-end test in `test/integration/friction_discovery_test.rb` asserts this explicitly.
 
@@ -309,6 +309,23 @@ AI_FAST_MODEL=gpt-5.6-luna
 AI_ANALYSIS_MODEL=gpt-5.6-terra
 AI_CHAT_MODEL=gpt-5.6-terra
 ```
+
+### Providers
+
+`AI_PROVIDER` picks the provider for the fast, analysis and chat roles; it defaults to
+`openai` and accepts any provider RubyLLM supports. Embeddings can stay on a different
+provider, since the vector column is sized for one embedding model:
+
+```
+AI_PROVIDER=openrouter
+OPENROUTER_API_KEY=sk-or-...
+AI_ANALYSIS_MODEL=anthropic/claude-sonnet-4.5
+AI_EMBEDDING_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+```
+
+`AI_REQUESTS_PER_MINUTE` and `AI_CALL_CONCURRENCY` pace calls to stay under the provider's
+rate limits. `.env.example` documents both.
 
 These are configuration, not secrets. There is no automatic escalation to a more expensive
 model: if that is ever added it must be explicit, configurable and cost-tracked.
