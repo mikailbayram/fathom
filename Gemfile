@@ -19,7 +19,7 @@ gem "inertia_rails", "~> 3.22"
 gem "vite_rails", "~> 3.11"
 
 # Provider-agnostic AI abstraction (OpenAI et al) [https://rubyllm.com]
-gem "ruby_llm", "~> 2.0"
+gem "ruby_llm", "~> 2.1"
 
 # HTTP client for the Firecrawl integration
 gem "faraday", "~> 2.9"
