@@ -14,7 +14,7 @@ gem "puma", ">= 5.0"
 gem "jbuilder"
 
 # Inertia.js server-side adapter -- React pages rendered from Rails controllers
-gem "inertia_rails", "~> 3.22"
+gem "inertia_rails", "~> 3.23"
 # Vite as the bundler for the Inertia/React frontend [https://vite-ruby.netlify.app]
 gem "vite_rails", "~> 3.11"
 
