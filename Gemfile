@@ -22,7 +22,7 @@ gem "vite_rails", "~> 3.11"
 gem "ruby_llm", "~> 2.0"
 
 # HTTP client for the Firecrawl integration
-gem "faraday", "~> 2.9"
+gem "faraday", "~> 2.15"
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
 # gem "bcrypt", "~> 3.1.7"
